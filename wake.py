@@ -164,13 +164,16 @@ def play_audio(file_path):
     # Load the audio file
     pygame.mixer.music.load(file_path)
 
-    # Start playing the audio with volume 0
-    pygame.mixer.music.set_volume(0.0)
-    pygame.mixer.music.play()
+    SONG_END = pygame.USEREVENT + 1
+    pygame.mixer.music.set_endevent(SONG_END)
 
     # Start a new thread to gradually stop the audio
     stop_audio_thread = Thread(target=stop_audio)
     stop_audio_thread.start()
+
+    # Start playing the audio with volume 0
+    pygame.mixer.music.set_volume(0.0)
+    pygame.mixer.music.play()
 
     # Gradually increase the volume over 15 minutes
     for i in range(1, 901):  # 900 seconds = 15 minutes
@@ -181,12 +184,14 @@ def play_audio(file_path):
             break
     
     # if the audio reaches the end, restart from the beginning until the stop_audio thread has finished
-    while pygame.mixer.music.get_busy():
-        pygame.mixer.music.rewind()
-        time.sleep(1)
-        # break the loop if the stop_audio thread has finished
+    while True:
+        for event in pygame.event.get():
+            if event.type == SONG_END:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.play()
         if not stop_audio_thread.is_alive():
             break
+        time.sleep(0.5)  # Check more frequently to stop the music in a timely manner
 
     # Wait for the stop_audio thread to finish
     stop_audio_thread.join()
