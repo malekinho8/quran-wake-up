@@ -2,10 +2,6 @@
 
 ---
 
-# README
-
-## Quranic Recitation Assistant
-
 This Python application assists in helping you wake up for Fajr prayer by providing 3 interactive verses + explanations from the Quran followed by a soothing Islamic prayer fade-in and fade-out [audio file from YouTube](https://www.youtube.com/watch?v=zlOKoHk9W0I). The program uses OpenAI's GPT-3.5 Turbo model to produce verses and corrrsponding Tafsir (explanation).
 
 ## Features
