@@ -81,7 +81,7 @@ def get_verses_and_explanations():
     # Get the explanations
     for verse in verses:
         verse_text = f'{verse}\n\n' + Project_Quran().Get_Ayah_English(verse).split('"')[1][0:-1]
-        prompt2 = f"You are an Islamic Scholar with extensive knowledge on the Quran and the life of Prophet Muhammad (pbuh). Please provide the Tafsir (meaning) of {verse_text}."
+        prompt2 = f"You are an Islamic Scholar with extensive knowledge on the Quran and the life of Prophet Muhammad (pbuh). Please provide the Tafsir (meaning) of {verse_text}, and if you know of any other alternative translations of the verse in question, please provide that too."
         explanation = query_gpt(prompt2)
         verse_texts.append(verse_text)
         explanations.append(explanation)
