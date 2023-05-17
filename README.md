@@ -34,7 +34,7 @@ This Python application assists in helping you wake up for Fajr prayer by provid
 ## Required Parameters
 
 - `--url`: The URL of the YouTube video to download the audio from.
-- `--hours`: The countdown hours before the program starts.
+- `--hours`: The countdown hours before the YouTube audio will play.
 - `--output`: The name of the output file (audio).
 
 ## Dependencies
