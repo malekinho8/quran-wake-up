@@ -11,6 +11,7 @@ import subprocess
 import openai
 import random
 from tqdm import tqdm
+from Quran_Module import Project_Quran
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 COMPLETIONS_MODEL = "gpt-3.5-turbo"
@@ -79,8 +80,7 @@ def get_verses_and_explanations():
 
     # Get the explanations
     for verse in verses:
-        prompt = f"You are an Islamic Scholar with extensive knowledge on the Quran and the life of Prophet Muhammad (pbuh). Please simply display {verse} in the closest English translation to the best of your knowledge, and nothing else."
-        verse_text = query_gpt(prompt)
+        verse_text = f'{verse}\n\n' + Project_Quran().Get_Ayah_English(verse).split('"')[1][0:-1]
         prompt2 = f"You are an Islamic Scholar with extensive knowledge on the Quran and the life of Prophet Muhammad (pbuh). Please provide the Tafsir (meaning) of {verse_text}."
         explanation = query_gpt(prompt2)
         verse_texts.append(verse_text)
@@ -123,7 +123,7 @@ def select_quran_verse():
     verse = random.randint(1, num_verses - 2)
 
     # Return the verses
-    return (f'{surah}:{verse}', f'{surah}:{verse + 1}', f'{surah}:{verse + 2}')
+    return (f'59,{surah},{verse}', f'59,{surah},{verse + 1}', f'59,{surah},{verse + 2}') # 59 corresponds to english Quran verse
 
 def query_gpt(prompt):
     # GPT-3 API parameters
