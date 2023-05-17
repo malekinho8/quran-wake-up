@@ -20,10 +20,9 @@ This Python application assists in helping you wake up for Fajr prayer by provid
     pip install -r requirements.txt
     pip install .
     ```
-2. Alternatively, install some dependencies manually and `fajrGPT` through PyPI:
+2. Alternatively, install one dependency manually and `fajrGPT` through PyPI:
     ```python
-    pip install git+https://github.com/ytdl-org/youtube-dl.git git+https://github.com/UBISOFT-1/Quran_Module.git
-    pip install fajrGPT
+    pip install git+https://github.com/ytdl-org/youtube-dl.git fajrGPT
     ```
 3. Run the main.py script, passing the required parameters:
     ```bash

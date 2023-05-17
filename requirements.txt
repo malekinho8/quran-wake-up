@@ -5,4 +5,4 @@ pydub
 moviepy
 openai
 tqdm
-git+https://github.com/UBISOFT-1/Quran_Module.git
+TheQuranModule

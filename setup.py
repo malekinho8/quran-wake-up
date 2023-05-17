@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fajrGPT",
-    version="1.1.1",
+    version="1.1.2",
     author="Malek Ibrahim",
     author_email="shmeek8@gmail.com",
     description=("A Python application to assist in waking up for Fajr prayer "
@@ -26,6 +26,7 @@ setup(
         "moviepy",
         "openai",
         "tqdm",
+        "TheQuranModule"
     ],
     entry_points={
         'console_scripts': [
