@@ -1,4 +1,4 @@
-# quran-wake-up
+# fajrGPT
 
 ---
 
@@ -14,13 +14,20 @@ This Python application assists in helping you wake up for Fajr prayer by provid
 
 ## Usage
 
-1. Install the required Python packages:
+1. Clone repo and install packages:
     ```bash
+    git clone https://github.com/malekinho8/quran-wake-up.git
     pip install -r requirements.txt
+    pip install .
     ```
-2. Run the main.py script, passing the required parameters:
+2. Alternatively, install some dependencies manually and `fajrGPT` through PyPI:
+    ```python
+    pip install git+https://github.com/ytdl-org/youtube-dl.git git+https://github.com/UBISOFT-1/Quran_Module.git
+    pip install fajrGPT
+    ```
+3. Run the main.py script, passing the required parameters:
     ```bash
-    python main.py --url <YouTube URL> --hours <Hours for Countdown> --output <Output filename>
+    fajrGPT --url <YouTube URL> --hours <Hours for Countdown> --output <Output filename>
     ```
     Replace `<YouTube URL>`, `<Hours for Countdown>`, and `<Output filename>` with appropriate values.
 
@@ -38,12 +45,7 @@ This Python application assists in helping you wake up for Fajr prayer by provid
 - `pygame`
 - `pydub`
 - `moviepy`
-- `threading`
-- `quran_metadata`
-- `time`
-- `subprocess`
 - `openai`
-- `keyboard`
 
 ## Notes
 

@@ -1,2 +1,13 @@
 *.mp3
 *.wav
+
+# build folders
+fajrGPT.egg-info/
+build/
+dist/
+
+# pycache
+*__pycache__*
+
+# VS Code
+.vscode/

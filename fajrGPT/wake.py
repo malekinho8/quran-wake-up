@@ -1,11 +1,11 @@
 import os
+import sys; sys.path.append('./')
 import click
 import youtube_dl
 import pygame
 from pydub import AudioSegment
-from moviepy.editor import AudioFileClip
 from threading import Thread
-from quran_metadata import quran_chapter_to_verse
+from fajrGPT.quran_metadata import quran_chapter_to_verse
 import time
 import subprocess
 import openai
@@ -16,23 +16,34 @@ from Quran_Module import Project_Quran
 openai.api_key = os.getenv("OPENAI_API_KEY")
 COMPLETIONS_MODEL = "gpt-3.5-turbo"
 
-@click.command()
-@click.option('--url', required=True, help='YouTube video URL.')
-@click.option('--hours', required=True, help='Countdown hours.')
-@click.option('--output', required=True, help='Name of the output file.')
+# @click.command()
+# @click.option('--url', required=True, help='YouTube video URL.')
+# @click.option('--hours', required=True, help='Countdown hours.')
+# @click.option('--output', required=True, help='Name of the output file.')
 
 def main(url, hours, output):
     # Download video
-    download_video(url,output)
+    flag = download_video(url,output)
 
     # test audio
-    test_audio(f'{output}.mp3',output)
+    test_audio(f'{output}.mp3',output,flag)
 
     # Start countdown
     countdown(hours)
 
-    # Play audio with fade-in effect
-    play_audio(f'{output}.mp3')
+    # Play audio with fade-in effect on a separate thread
+    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',))
+    play_audio_thread.start()
+
+    # display the quran verses
+    get_verses_and_explanations()
+
+    # stop the audio once the user has completed reading the verses
+    stop_audio()
+
+    # return back to the main thread
+    play_audio_thread.join()
+
 
 def download_video(url,output):
     ydl_opts = {
@@ -47,12 +58,16 @@ def download_video(url,output):
         'verbose': True,
     }
     if not os.path.exists(f'{output}.mp3'):
+        converted_flag = False
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
+    else:
+        converted_flag = True
+    return converted_flag
 
-def test_audio(file_path,output):
+def test_audio(file_path,output,converted_flag):
     # rename the {output}.mp3 file to temp.mp3
-    if not os.path.exists(f'{output}.mp3'):
+    if not converted_flag:
         os.rename(f'{output}.mp3', 'temp.mp3')
         command = f'ffmpeg -i temp.mp3 {output}.mp3'
         # remove the temp.mp3 file
@@ -62,16 +77,20 @@ def test_audio(file_path,output):
             audio = AudioSegment.from_file(file_path, format="mp3")
         except:
             print("Error: Audio file could not be loaded.")
+    else:
+        print(f'{output}.mp3 has already been downloaded and converted.')
 
 def countdown(hours):
     countdown_seconds = float(hours) * 60 * 60
     # use tqdm to display the countdown progress
+    print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n\n\n')
     for i in tqdm(range(int(countdown_seconds))):
         time.sleep(1)
+    print('\n\n\n\n ---------------- COUNTDOWN COMPLETE ----------------')
 
 def get_verses_and_explanations():
     # Get the verses
-    verses = select_quran_verse()
+    verses_Quran_Module, verses  = select_quran_verse()
     # print(f"Verse 1:\n{verses}")
 
     # initialize the verse_texts output and explanations output
@@ -79,16 +98,17 @@ def get_verses_and_explanations():
     explanations = []
 
     # Get the explanations
-    for verse in verses:
-        verse_text = f'{verse}\n\n' + Project_Quran().Get_Ayah_English(verse).split('"')[1][0:-1]
-        prompt2 = f"You are an Islamic Scholar with extensive knowledge on the Quran and the life of Prophet Muhammad (pbuh). Please provide the Tafsir (meaning) of {verse_text}, and if you know of any other alternative translations of the verse in question, please provide that too."
+    for verse_QM, verse in zip(verses_Quran_Module, verses):
+        verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1]
+        prompt2 = f"To the best of your knowledge, please provide the Tafsir (meaning) of {verse_text} which comes from verse {verse} of the Quran. If you know of any other alternative translations of the verse in question, please provide that too, but if you are not familiar with this verse, simply try to explain the language of the verse."
         explanation = query_gpt(prompt2)
         verse_texts.append(verse_text)
         explanations.append(explanation)
     
     # begin the interactive session
     for verse_text, explanation, verse in zip(verse_texts, explanations, verses):
-        print(f'\n\n\n\n{verse}:\n{verse_text} \n\n ------------------ \n\n When you are ready to see the explanaton, press Enter.')
+        print(f'\n\n\n\n\n\n ------------------ FIRST VERSE ------------------') if verse == verses[0] else None
+        print(f'\n\n{verse}:\n{verse_text} \n\n ------------------ \n\n When you are ready to see the explanaton, press Enter.')
         # wait for the user to press Enter
         input()
 
@@ -123,7 +143,7 @@ def select_quran_verse():
     verse = random.randint(1, num_verses - 2)
 
     # Return the verses
-    return (f'59,{surah},{verse}', f'59,{surah},{verse + 1}', f'59,{surah},{verse + 2}') # 59 corresponds to english Quran verse
+    return (f'59,{surah},{verse}', f'59,{surah},{verse + 1}', f'59,{surah},{verse + 2}'), (f'{surah}:{verse}',f'{surah}:{verse+1}' ,f'{surah}:{verse+2}') # 59 corresponds to english Quran verse
 
 def query_gpt(prompt):
     # GPT-3 API parameters
@@ -141,64 +161,63 @@ def query_gpt(prompt):
 
     return response['choices'][0]['message']['content']
 
-def gradually_decrease_volume():
-    # Gradually decrease the volume over 5 seconds
-    for i in range(1, 501):  # 500 steps over 5 seconds
-        pygame.mixer.music.set_volume(1 - i / 500.0)  # gradually decrease the volume
-        time.sleep(0.01)
+def gradually_change_volume(start_volume, end_volume, duration):
+    # Compute the number of steps and the change in volume per step
+    steps = duration
+    delta_volume = (end_volume - start_volume) / steps
 
-def stop_audio():
-    # Gradually decrease the volume over 5 seconds
-    get_verses_and_explanations()
+    # Set the initial volume
+    pygame.mixer.music.set_volume(start_volume)
 
-    # Start a new thread to gradually decrease the volume
-    Thread(target=gradually_decrease_volume).start()
+    # Gradually change the volume
+    for i in range(steps):
+        # Wait for 1 second
+        time.sleep(1)
 
-    # Stop the audio
-    pygame.mixer.music.stop()
+        # Change the volume
+        new_volume = start_volume + i * delta_volume
+        pygame.mixer.music.set_volume(new_volume)
+
+        # If the stop_audio function has been called, break the loop
+        if stop_audio_called:
+            print("Stopping volume change due to stop_audio being called")
+            break
 
 def play_audio(file_path):
+    global stop_audio_called
+    stop_audio_called = False
+
     # Initialize pygame mixer
     pygame.mixer.init()
 
     # Load the audio file
     pygame.mixer.music.load(file_path)
 
-    SONG_END = pygame.USEREVENT + 1
-    pygame.mixer.music.set_endevent(SONG_END)
-
-    # Start a new thread to gradually stop the audio
-    stop_audio_thread = Thread(target=stop_audio)
-    stop_audio_thread.start()
-
     # Start playing the audio with volume 0
     pygame.mixer.music.set_volume(0.0)
     pygame.mixer.music.play()
 
-    # Gradually increase the volume over 15 minutes
-    for i in range(1, 901):  # 900 seconds = 15 minutes
-        time.sleep(1)
-        pygame.mixer.music.set_volume(i / 900.0)  # gradually increase the volume
-        # break the loop if the stop_audio thread has finished
-        if not stop_audio_thread.is_alive():
-            break
-    
-    # if the audio reaches the end, restart from the beginning until the stop_audio thread has finished
-    while True:
-        for event in pygame.event.get():
-            if event.type == SONG_END:
-                pygame.mixer.music.stop()
-                pygame.mixer.music.play()
-        if not stop_audio_thread.is_alive():
-            break
-        time.sleep(0.5)  # Check more frequently to stop the music in a timely manner
+    # Gradually increase the volume over 15 minutes in a separate thread
+    gradually_change_volume(0.0, 1.0, 900)
 
-    # Wait for the stop_audio thread to finish
-    stop_audio_thread.join()
-    time.sleep(5)
+    # Loop the audio until the stop_audio function is called
+    while not stop_audio_called:
+        if not pygame.mixer.music.get_busy():
+            # The music has finished, restart it
+            pygame.mixer.music.play()
+        time.sleep(1)    
 
-    # Stop the audio
+def stop_audio():
+    global stop_audio_called
+    stop_audio_called = True # stop the audio in the other thread
+    time.sleep(1)
+    stop_audio_called = False # reset back to False to allow volume to decrease
+    gradually_change_volume(pygame.mixer.music.get_volume(), 0.0, 10)
+
+    # Stop the audio completely
+    stop_audio_called = True
     pygame.mixer.music.stop()
 
 if __name__ == "__main__":
-    main()
+    main("https://www.youtube.com/watch?v=zlOKoHk9W0I", "0", "islam1")
+
