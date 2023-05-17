@@ -16,10 +16,10 @@ from Quran_Module import Project_Quran
 openai.api_key = os.getenv("OPENAI_API_KEY")
 COMPLETIONS_MODEL = "gpt-3.5-turbo"
 
-# @click.command()
-# @click.option('--url', required=True, help='YouTube video URL.')
-# @click.option('--hours', required=True, help='Countdown hours.')
-# @click.option('--output', required=True, help='Name of the output file.')
+@click.command()
+@click.option('--url', required=True, help='YouTube video URL.')
+@click.option('--hours', required=True, help='Countdown hours.')
+@click.option('--output', required=True, help='Name of the output file.')
 
 def main(url, hours, output):
     # Download video
@@ -219,5 +219,5 @@ def stop_audio():
     pygame.mixer.music.stop()
 
 if __name__ == "__main__":
-    main("https://www.youtube.com/watch?v=zlOKoHk9W0I", "0", "islam1")
+    main()
 
