@@ -85,12 +85,12 @@ def countdown(hours):
     # use tqdm to display the countdown progress
     print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n\n\n')
     # print the current time in HH:MM format
-    print(f'\n\Start Time: {time.strftime("%H:%M", time.localtime())}\n\n')
+    print(f'\n\START TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
     for i in tqdm(range(int(countdown_seconds))):
         time.sleep(1)
     print('\n\n\n\n ---------------- COUNTDOWN COMPLETE ----------------')
     # print the current time in HH:MM format
-    print(f'\n\End Time: {time.strftime("%H:%M", time.localtime())}\n\n')
+    print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
 def get_verses_and_explanations():
     # Get the verses
