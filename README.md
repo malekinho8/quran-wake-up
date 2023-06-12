@@ -14,7 +14,7 @@ This Python application assists in helping you wake up for Fajr prayer by provid
 
 ## Usage
 
-1. Clone repo and install packages:
+1. Clone repo and install packages (for developers):
     ```bash
     git clone https://github.com/malekinho8/quran-wake-up.git
     pip install -r requirements.txt
