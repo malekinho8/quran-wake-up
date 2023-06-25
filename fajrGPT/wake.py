@@ -18,18 +18,21 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 
 @click.command()
 @click.option('--url', required=True, help='YouTube video URL.')
-@click.option('--hours', required=True, help='Countdown hours.')
+@click.option('--time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--output', required=True, help='Name of the output file.')
 
-def main(url, hours, output):
+def main(url, time, output):
     # Download video
     flag = download_video(url,output)
 
     # test audio
     test_audio(f'{output}.mp3',output,flag)
 
+    # convert time to seconds
+    countdown_seconds = convert_to_seconds(time)
+
     # Start countdown
-    countdown(hours)
+    countdown(countdown_seconds)
 
     # Play audio with fade-in effect on a separate thread
     play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',))
@@ -43,6 +46,21 @@ def main(url, hours, output):
 
     # return back to the main thread
     play_audio_thread.join()
+
+def convert_to_seconds(time_str):
+    # Get the number and the time unit (h/m/s)
+    number = int(time_str[:-1])
+    unit = time_str[-1].lower()
+
+    # Convert to seconds
+    if unit == "h":
+        return number * 60 * 60
+    elif unit == "m":
+        return number * 60
+    elif unit == "s":
+        return number
+    else:
+        raise ValueError("Invalid time format. Use [number][h/m/s] format.")
 
 
 def download_video(url,output):
@@ -80,8 +98,7 @@ def test_audio(file_path,output,converted_flag):
     else:
         print(f'{output}.mp3 has already been downloaded and converted.')
 
-def countdown(hours):
-    countdown_seconds = float(hours) * 60 * 60
+def countdown(countdown_seconds):
     # use tqdm to display the countdown progress
     print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n\n\n')
     # print the current time in HH:MM format
