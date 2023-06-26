@@ -49,7 +49,7 @@ def main(url, time, output):
 
 def convert_to_seconds(time_str):
     # Get the number and the time unit (h/m/s)
-    number = int(time_str[:-1])
+    number = float(time_str[:-1])
     unit = time_str[-1].lower()
 
     # Convert to seconds
