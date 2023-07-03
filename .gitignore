@@ -11,3 +11,7 @@ dist/
 
 # VS Code
 .vscode/
+
+# sandbox
+sandbox/
+

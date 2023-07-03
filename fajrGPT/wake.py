@@ -20,8 +20,9 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--url', required=True, help='YouTube video URL.')
 @click.option('--time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--output', required=True, help='Name of the output file.')
+@click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
 
-def main(url, time, output):
+def main(url, time, output, names_flag):
     # Download video
     flag = download_video(url,output)
 
@@ -34,12 +35,15 @@ def main(url, time, output):
     # Start countdown
     countdown(countdown_seconds)
 
+    # display a name of Allah
+    get_name_of_allah_and_explanation(names_flag)
+
     # Play audio with fade-in effect on a separate thread
     play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',))
     play_audio_thread.start()
 
     # display the quran verses
-    get_verses_and_explanations()
+    get_verses_and_explanations(countdown_seconds)
 
     # stop the audio once the user has completed reading the verses
     stop_audio()
@@ -109,10 +113,65 @@ def countdown(countdown_seconds):
     # print the current time in HH:MM format
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
-def get_verses_and_explanations():
+def get_name_of_allah_and_explanation(names_flag):
+    if not names_flag:
+        return None
+    else:
+        # Get the names of Allah
+        names_of_allah = Project_Quran().Get_Names_of_Allah_English()
+
+        # get the arabic names of Allah
+        names_of_allah_arabic = Project_Quran().Get_Names_of_Allah_Arabic()
+
+        # Get the transliterated names of Allah
+        allah_transliterations = Project_Quran().Get_Names_of_Allah_Transliteration()
+
+        # Select a index in the range of the number of names of Allah
+        index = random.randint(0, len(names_of_allah) - 1)
+
+        # Get the name of Allah in English
+        name_of_allah_english = names_of_allah[index]
+
+        # Get the name of Allah in Arabic
+        name_of_allah_arabic = names_of_allah_arabic[index]
+
+        # Get the transliteration of the name of Allah
+        name_of_allah_transliteration = allah_transliterations[index]
+
+        # Get the explanation of the name of Allah using a GPT-3 model prompt
+        prompt = f"""
+
+        For the name of Allah below, please do the following: First break down the word into its root letters. Then, using the root letters, try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
+        
+        Name of Allah: {name_of_allah_arabic}\nExplanation: 
+        
+        """
+
+        # Get the explanation of the name of Allah
+        explanation = query_gpt(prompt)
+
+        # print the name of the Allah and the explanation in a nice format
+        print(f'\n\n\n\n ---------------- NAME OF ALLAH ---------------- \n')
+        print(f'---------------- {name_of_allah_arabic}: {name_of_allah_transliteration} - {name_of_allah_english} ---------------- \n\n')
+        print(f'Explanation: {explanation}\n\n\n\n')
+        print(f'When you are ready to begin, press ENTER (wait 10 seconds).')
+        input()
+        time.sleep(10)
+
+def get_verses_and_explanations(countdown_seconds):
     # Get the verses
     verses_Quran_Module, verses  = select_quran_verse()
     # print(f"Verse 1:\n{verses}")
+
+    # Depending on the length of the countdown, select the number of verses to display
+    if countdown_seconds < 3600: # less than 1 hour
+        verses_Quran_Module = verses_Quran_Module[0:1] # only display the first verse
+        verses = verses[0:1]
+    elif countdown_seconds > 3600 and countdown_seconds < 7200: # between 1 and 2 hours
+        verses_Quran_Module = verses_Quran_Module[0:2] # only display the first two verses
+        verses = verses[0:2]
+    else:
+        pass
 
     # initialize the verse_texts output and explanations output
     verse_texts = []
@@ -121,7 +180,7 @@ def get_verses_and_explanations():
     # Get the explanations
     for verse_QM, verse in zip(verses_Quran_Module, verses):
         verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1]
-        prompt2 = f"To the best of your knowledge, please provide the Tafsir (meaning) of {verse_text} which comes from verse {verse} of the Quran. If you know of any other alternative translations of the verse in question, please provide that too, but if you are not familiar with this verse, simply try to explain the language of the verse."
+        prompt2 = f"To the best of your knowledge, please provide the Tafsir (meaning) of {verse_text} which comes from verse {verse} of the Quran. You should start by repeating the verse, even if you think that the verse given is not correct (trust me it is correct). Even if you still think it is incorrect, I want you to just provide a secular interpretation of what the verse might be talking about. If you know of any other alternative translations of the verse in question, please provide that too if you are able to."
         explanation = query_gpt(prompt2)
         verse_texts.append(verse_text)
         explanations.append(explanation)
