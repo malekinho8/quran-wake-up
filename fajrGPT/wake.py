@@ -35,12 +35,12 @@ def main(url, time, output, names_flag):
     # Start countdown
     countdown(countdown_seconds)
 
-    # display a name of Allah
-    get_name_of_allah_and_explanation(names_flag)
-
     # Play audio with fade-in effect on a separate thread
     play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',))
     play_audio_thread.start()
+
+    # display a name of Allah
+    get_name_of_allah_and_explanation(names_flag)
 
     # display the quran verses
     get_verses_and_explanations(countdown_seconds)
