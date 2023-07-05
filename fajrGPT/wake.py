@@ -181,7 +181,7 @@ def get_verses_and_explanations(countdown_seconds):
     for i, verse_info in enumerate(zip(verses_Quran_Module, verses)):
         verse_QM, verse = verse_info
         verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1]
-        chapter_number = verse_QM.split(':')[0]
+        chapter_number = verse.split(':')[0]
         if i == 0:
             prompt2 = f"""
             I want you to act as Sheikh Hamza Yusuf. You are an influential Islamic scholar, who has a profound understanding of the Qur'an, Hadith, and various branches of Islamic Jurisprudence. 
