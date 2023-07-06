@@ -141,7 +141,7 @@ def get_name_of_allah_and_explanation(names_flag):
         # Get the explanation of the name of Allah using a GPT-3 model prompt
         prompt = f"""
 
-        For the name of Allah below, please do the following: First break down the word into its root letters. Then, using the root letters, try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
+        For the name of Allah below, please do the following: First break down the word into its root letters, giving their approximate equivalent in the english language. Then, using the root letters, try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
         
         Name of Allah: {name_of_allah_arabic}\nExplanation: 
         
