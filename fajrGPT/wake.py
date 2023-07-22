@@ -8,8 +8,10 @@ from threading import Thread
 from fajrGPT.quran_metadata import quran_chapter_to_verse
 import time
 import subprocess
+import requests
 import openai
 import random
+import tempfile
 from tqdm import tqdm
 from Quran_Module import Project_Quran
 
@@ -262,7 +264,16 @@ def query_gpt(prompt):
 
 def gradually_change_volume(start_volume, end_volume, duration):
     # Compute the number of steps and the change in volume per step
-    steps = duration
+    steps = int(duration * 100)  # Multiply by 100 to allow for hundredths of seconds
+    delay = 0.01  # Delay for each step
+
+    max_steps = 10000  # Maximum number of steps
+
+    # If steps are more than maximum, adjust steps and delay
+    if steps > max_steps:
+        steps = max_steps
+        delay = duration / max_steps
+
     delta_volume = (end_volume - start_volume) / steps
 
     # Set the initial volume
@@ -270,8 +281,8 @@ def gradually_change_volume(start_volume, end_volume, duration):
 
     # Gradually change the volume
     for i in range(steps):
-        # Wait for 1 second
-        time.sleep(1)
+        # Wait for the calculated delay
+        time.sleep(delay)
 
         # Change the volume
         new_volume = start_volume + i * delta_volume
@@ -282,9 +293,17 @@ def gradually_change_volume(start_volume, end_volume, duration):
             print("Stopping volume change due to stop_audio being called")
             break
 
-def play_audio(file_path):
+def play_audio(file_path_or_url, transition_time=900):
     global stop_audio_called
     stop_audio_called = False
+    file_path = ''
+
+    # Check if file_path_or_url is URL
+    if file_path_or_url.startswith('http'):
+        # Download the file and get the path
+        file_path = download_file(file_path_or_url)
+    else:
+        file_path = file_path_or_url
 
     # Initialize pygame mixer
     pygame.mixer.init()
@@ -297,14 +316,18 @@ def play_audio(file_path):
     pygame.mixer.music.play()
 
     # Gradually increase the volume over 15 minutes in a separate thread
-    gradually_change_volume(0.0, 1.0, 900)
+    gradually_change_volume(0.0, 1.0, transition_time)
 
     # Loop the audio until the stop_audio function is called
     while not stop_audio_called:
         if not pygame.mixer.music.get_busy():
             # The music has finished, restart it
             pygame.mixer.music.play()
-        time.sleep(1)    
+        time.sleep(1)
+
+    # Delete the file if it was downloaded
+    if file_path_or_url.startswith('http'):
+        os.remove(file_path)    
 
 def stop_audio():
     global stop_audio_called
@@ -316,6 +339,20 @@ def stop_audio():
     # Stop the audio completely
     stop_audio_called = True
     pygame.mixer.music.stop()
+
+def download_file(url):
+    """Download file from URL and return the path to the file"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+    response = requests.get(url, headers=headers, stream=True)
+    file = tempfile.NamedTemporaryFile(delete=False)
+    file_path = file.name
+    with open(file_path, 'wb') as fd:
+        for chunk in response.iter_content(chunk_size=1024):
+            fd.write(chunk)
+    return file_path
+
 
 if __name__ == "__main__":
     main()
