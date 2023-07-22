@@ -44,14 +44,74 @@ def main(url, time, output, names_flag):
     # display a name of Allah
     get_name_of_allah_and_explanation(names_flag)
 
-    # display the quran verses
-    get_verses_and_explanations(countdown_seconds)
+    # stop the misharay audio once the user has finished reading the name of Allah on a separate thread
+    stop_audio(5)
+
+    # select the quran verses
+    versesQM, verses = select_quran_verse()
+
+    # print the verses selected
+    print(f'\n\nQuran Verses Selected:\n')
+    for verse in verses:
+        print(f'{verse}')
+    
+    # play the audio of the quran verses
+    play_audio_thread = Thread(target=play_quran_verses_audio, args=(verses,0.5))
+    play_audio_thread.start()
+
+    # get the explanations of the quran verses
+    get_explanations(versesQM, verses, countdown_seconds)
 
     # stop the audio once the user has completed reading the verses
     stop_audio()
 
     # return back to the main thread
     play_audio_thread.join()
+
+def play_quran_verses_audio(verses,transition_time=0.5):
+    # convert verses to urls
+    urls = [quran_verse_to_mp3_url(verse) for verse in verses]
+
+    # download the verse audio
+    file_paths = [download_file_and_sleep(url,0.5) for url in urls]
+
+    # concatenate the audio files into one
+    combined_audio_file_name = combine_audio_from_files(file_paths)
+
+    # delete the temporary files
+    for file_path in file_paths:
+        os.remove(file_path)
+
+    # play the audio of the combined quaran verses
+    play_audio(combined_audio_file_name, transition_time)
+
+def combine_audio_from_files(file_paths):
+    # combine the audio files
+    combined_audio = AudioSegment.empty()
+    for file_path in file_paths:
+        combined_audio += AudioSegment.from_mp3(file_path)
+
+    # create a temporary file to store the combined audio
+    temp_file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
+
+    # export the combined audio to the temporary file
+    combined_audio.export(temp_file.name, format='mp3')
+
+    # return the path to the temporary file
+    return temp_file.name
+
+def quran_verse_to_mp3_url(verse):
+    # get the chapter and verse number
+    chapter, verse_number = verse.split(':')
+
+    # convert the numbers to the correct string format
+    chapter = chapter.zfill(3)
+    verse_number = verse_number.zfill(3)
+
+    # get the url of the mp3 file
+    url = f'https://islamicstudies.info/quran/afasy/audio/{chapter}{verse_number}.mp3'
+
+    return url
 
 def convert_to_seconds(time_str):
     # Get the number and the time unit (h/m/s)
@@ -156,15 +216,10 @@ def get_name_of_allah_and_explanation(names_flag):
         print(f'\n\n\n\n ---------------- NAME OF ALLAH ---------------- \n')
         print(f'---------------- {name_of_allah_arabic}: {name_of_allah_transliteration} - {name_of_allah_english} ---------------- \n\n')
         print(f'Explanation: {explanation}\n\n\n\n')
-        print(f'When you are ready to begin, press ENTER (wait 10 seconds).')
+        print(f'When you are ready to begin, press ENTER.')
         input()
-        time.sleep(10)
 
-def get_verses_and_explanations(countdown_seconds):
-    # Get the verses
-    verses_Quran_Module, verses  = select_quran_verse()
-    # print(f"Verse 1:\n{verses}")
-
+def get_explanations(verses_Quran_Module,verses,countdown_seconds):
     # Depending on the length of the countdown, select the number of verses to display
     if countdown_seconds < 3600: # less than 1 hour
         verses_Quran_Module = verses_Quran_Module[0:1] # only display the first verse
@@ -193,16 +248,18 @@ def get_verses_and_explanations(countdown_seconds):
             First please give some brief context about Chapter {chapter_number} from the Qur'an. Then, to the best of your ability, explain the meaning of the verse below. 
             I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to interpret the possible meaning of the verse given. \n\n Verse: {verse_text} \n\n Explanation:
             """
+            explanation = query_gpt(prompt2)
         else:
+            concatenated_explanations = '\n\n'.join(explanations)
             prompt2 = f"""
             I want you to act as Sheikh Hamza Yusuf. You are an influential Islamic scholar, who has a profound understanding of the Qur'an, Hadith, and various branches of Islamic Jurisprudence. 
             You are deeply conversant with the various cultural, historical, and philosophical contexts of Islamic thought. You are committed to promoting peace, understanding, and the intellectual tradition of Islam. 
             I know that you are just an AI, but I don't want you to say that at the beginning, just emulate this description to the best of your ability. My first request is as follows:
 
             To the best of your ability, explain the meaning of the verse below. 
-            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse. \n\n Verse: {verse_text} \n\n Explanation:
+            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse. \n\n Verse: {verse_text} \n\n Context: {concatenated_explanations} \n\n Explanation:
             """
-        explanation = query_gpt(prompt2)
+            explanation = query_gpt(prompt2)
         verse_texts.append(verse_text)
         explanations.append(explanation)
     
@@ -220,6 +277,14 @@ def get_verses_and_explanations(countdown_seconds):
             print(f'{explanation} \n\n ------------------ \n\n When you are ready to stop the alarm, press Enter (20 second timer).')
         time.sleep(20) # Wait for the user to press Enter, but not before 20 seconds have passed
         input() # wait for the user to press Enter
+
+def get_verses_and_explanations(countdown_seconds):
+    # Get the verses
+    verses_Quran_Module, verses  = select_quran_verse()
+    # print(f"Verse 1:\n{verses}")
+
+    # Get the explanations
+    get_explanations(verses_Quran_Module,verses,countdown_seconds)
 
 def select_quran_verse():
     # List of surah numbers
@@ -329,12 +394,12 @@ def play_audio(file_path_or_url, transition_time=900):
     if file_path_or_url.startswith('http'):
         os.remove(file_path)    
 
-def stop_audio():
+def stop_audio(transition_time=10):
     global stop_audio_called
     stop_audio_called = True # stop the audio in the other thread
     time.sleep(1)
     stop_audio_called = False # reset back to False to allow volume to decrease
-    gradually_change_volume(pygame.mixer.music.get_volume(), 0.0, 10)
+    gradually_change_volume(pygame.mixer.music.get_volume(), 0.0, transition_time)
 
     # Stop the audio completely
     stop_audio_called = True
@@ -352,6 +417,11 @@ def download_file(url):
         for chunk in response.iter_content(chunk_size=1024):
             fd.write(chunk)
     return file_path
+
+def download_file_and_sleep(url, time_to_sleep=0.5):
+    result = download_file(url)
+    time.sleep(time_to_sleep)
+    return result
 
 
 if __name__ == "__main__":
