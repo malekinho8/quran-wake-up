@@ -19,14 +19,21 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 COMPLETIONS_MODEL = "gpt-3.5-turbo"
 
 @click.command()
-@click.option('--url', required=True, help='YouTube video URL.')
+@click.option('--url', required=True, help='YouTube URL containing desired audio data.')
 @click.option('--time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--output', required=True, help='Name of the output file.')
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
+@click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
 
-def main(url, time, output, names_flag):
-    # Download video
-    flag = download_video(url,output)
+def main(url, time, output, names_flag, surah=None):
+    # Check surah option
+    if surah:
+        # make the output file name the same as the surah
+        output = 'quran-' + '{:03d}'.format(int(surah))
+        flag = download_surah(surah, output)
+    else:
+        # Download video
+        flag = download_video(url, output)
 
     # test audio
     test_audio(f'{output}.mp3',output,flag)
@@ -38,7 +45,7 @@ def main(url, time, output, names_flag):
     countdown(countdown_seconds)
 
     # Play audio with fade-in effect on a separate thread
-    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',))
+    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',5))
     play_audio_thread.start()
 
     # display a name of Allah
@@ -67,6 +74,30 @@ def main(url, time, output, names_flag):
 
     # return back to the main thread
     play_audio_thread.join()
+
+def download_surah(surah, output):
+    # obtain the number of verses in the surah
+    num_verses = quran_chapter_to_verse[int(surah)]
+    
+    # loop over all the verses in the surah and construct the urls
+    urls = [quran_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(1,num_verses+1)]
+
+    # download the verse audio and sleep for 0.5 seconds between each download
+    file_paths = [download_file_and_sleep(url,0.5) for url in urls]
+
+    # combine the audio files
+    combined_audio = AudioSegment.empty()
+    for file_path in file_paths:
+        combined_audio += AudioSegment.from_mp3(file_path)
+    
+    # save the mp3 to the output file
+    combined_audio.export(f'{output}.mp3', format="mp3")
+
+    # delete the temporary files
+    for file_path in file_paths:
+        os.remove(file_path)
+
+    return True    
 
 def play_quran_verses_audio(verses,transition_time=0.5):
     # convert verses to urls
