@@ -45,7 +45,7 @@ def main(url, time, output, names_flag, surah=None):
     countdown(countdown_seconds)
 
     # Play audio with fade-in effect on a separate thread
-    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',5))
+    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',600))
     play_audio_thread.start()
 
     # display a name of Allah
