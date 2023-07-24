@@ -23,9 +23,10 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--output', required=True, help='Name of the output file.')
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
+@click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.')
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
 
-def main(url, time, output, names_flag, surah=None):
+def main(url, time, output, names_flag, transition_time=600, surah=None):
     # Check surah option
     if surah:
         # make the output file name the same as the surah
@@ -45,7 +46,7 @@ def main(url, time, output, names_flag, surah=None):
     countdown(countdown_seconds)
 
     # Play audio with fade-in effect on a separate thread
-    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',600))
+    play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',transition_time))
     play_audio_thread.start()
 
     # display a name of Allah
