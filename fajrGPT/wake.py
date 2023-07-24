@@ -282,14 +282,14 @@ def get_explanations(verses_Quran_Module,verses,countdown_seconds):
             """
             explanation = query_gpt(prompt2)
         else:
-            concatenated_explanations = '\n\n'.join(explanations)
+            context = explanations[0].split('\n')[0] # get the context about what the chapter is about.
             prompt2 = f"""
             I want you to act as Sheikh Hamza Yusuf. You are an influential Islamic scholar, who has a profound understanding of the Qur'an, Hadith, and various branches of Islamic Jurisprudence. 
             You are deeply conversant with the various cultural, historical, and philosophical contexts of Islamic thought. You are committed to promoting peace, understanding, and the intellectual tradition of Islam. 
             I know that you are just an AI, but I don't want you to say that at the beginning, just emulate this description to the best of your ability. My first request is as follows:
 
             To the best of your ability, explain the meaning of the verse below. 
-            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse. \n\n Verse: {verse_text} \n\n Context: {concatenated_explanations} \n\n Explanation:
+            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse. \n\n Verse: \n {verse_text} \n\n Context: \n {context} \n\n Explanation: \n
             """
             explanation = query_gpt(prompt2)
         verse_texts.append(verse_text)
