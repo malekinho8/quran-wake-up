@@ -23,7 +23,7 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--output', required=True, help='Name of the output file.')
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
-@click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.')
+@click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.', default=600)
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
 
 def main(url, time, output, names_flag, transition_time=600, surah=None):
