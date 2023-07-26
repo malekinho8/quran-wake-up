@@ -25,6 +25,7 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
 @click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.', default=600)
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
+# TODO: add option for including english translation of each surah if the user selects the surah option. Perhaps use a natural language generation model to generate the translation from the english translation of the Quran verses.
 
 def main(url, time, output, names_flag, transition_time=600, surah=None):
     # Check surah option
@@ -103,6 +104,13 @@ def download_surah(surah, output):
 def play_quran_verses_audio(verses,transition_time=0.5):
     # convert verses to urls
     urls = [quran_verse_to_mp3_url(verse) for verse in verses]
+
+    # TODO: find mp3 url for the english translation of each verse and append it to the urls list depending on an option the user selects
+    # if include_english_translation:
+    ## if insert_translation_after_verse:
+    ### urls.append(english_translation_url)
+    ## elif insert_translation_within_verse:
+    ### urls.insert(1,english_translation_url)
 
     # download the verse audio
     file_paths = [download_file_and_sleep(url,0.5) for url in urls]
@@ -235,7 +243,8 @@ def get_name_of_allah_and_explanation(names_flag):
         # Get the explanation of the name of Allah using a GPT-3 model prompt
         prompt = f"""
 
-        For the name of Allah below, please do the following: First break down the word into its root letters, giving their approximate equivalent in the english language. Then, using the root letters, try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
+        For the name of Allah below, please do the following: First break down the word into its root letters and also identify the corresponding Arabic letter for each phonetic sound, giving their approximate equivalent in the english language.
+        Then, using the root letters, try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
         
         Name of Allah: {name_of_allah_arabic}\nExplanation: 
         
@@ -269,7 +278,7 @@ def get_explanations(verses_Quran_Module,verses,countdown_seconds):
     # Get the explanations
     for i, verse_info in enumerate(zip(verses_Quran_Module, verses)):
         verse_QM, verse = verse_info
-        verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1]
+        verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1].replace("&quot;",'"')
         chapter_number = verse.split(':')[0]
         if i == 0:
             prompt2 = f"""
