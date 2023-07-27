@@ -78,26 +78,31 @@ def main(url, time, output, names_flag, transition_time=600, surah=None):
     play_audio_thread.join()
 
 def download_surah(surah, output):
-    # obtain the number of verses in the surah
-    num_verses = quran_chapter_to_verse[int(surah)]
-    
-    # loop over all the verses in the surah and construct the urls
-    urls = [quran_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(1,num_verses+1)]
+    # check if the output file already exists
+    if os.path.exists(f'{output}.mp3'):
+        # if the output file exists, then return True
+        return True
+    else:
+        # obtain the number of verses in the surah
+        num_verses = quran_chapter_to_verse[int(surah)] + 1 # +1 corresponds to the basmalah
+        
+        # loop over all the verses in the surah and construct the urls
+        urls = [quran_verse_to_mp3_url("1:1")] + [quran_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(1,num_verses+1)]
 
-    # download the verse audio and sleep for 0.5 seconds between each download
-    file_paths = [download_file_and_sleep(url,0.5) for url in urls]
+        # download the verse audio and sleep for 0.5 seconds between each download
+        file_paths = [download_file_and_sleep(url,0.5) for url in urls]
 
-    # combine the audio files
-    combined_audio = AudioSegment.empty()
-    for file_path in file_paths:
-        combined_audio += AudioSegment.from_mp3(file_path)
-    
-    # save the mp3 to the output file
-    combined_audio.export(f'{output}.mp3', format="mp3")
+        # combine the audio files
+        combined_audio = AudioSegment.empty()
+        for file_path in file_paths:
+            combined_audio += AudioSegment.from_mp3(file_path)
+        
+        # save the mp3 to the output file
+        combined_audio.export(f'{output}.mp3', format="mp3")
 
-    # delete the temporary files
-    for file_path in file_paths:
-        os.remove(file_path)
+        # delete the temporary files
+        for file_path in file_paths:
+            os.remove(file_path)
 
     return True    
 
@@ -278,7 +283,7 @@ def get_explanations(verses_Quran_Module,verses,countdown_seconds):
     # Get the explanations
     for i, verse_info in enumerate(zip(verses_Quran_Module, verses)):
         verse_QM, verse = verse_info
-        verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1].replace("&quot;",'"')
+        verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1].replace("&quot;",'"').replace("&quot",'"')
         chapter_number = verse.split(':')[0]
         if i == 0:
             prompt2 = f"""
