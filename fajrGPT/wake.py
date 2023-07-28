@@ -12,6 +12,7 @@ import requests
 import openai
 import random
 import tempfile
+import mutagen.mp3 as mp3
 from tqdm import tqdm
 from Quran_Module import Project_Quran
 
@@ -425,6 +426,11 @@ def play_audio(file_path_or_url, transition_time=900):
     # Start playing the audio with volume 0
     pygame.mixer.music.set_volume(0.0)
     pygame.mixer.music.play()
+
+    # if the transition time is longer than the audio, set it to the audio length
+    length_in_seconds = mp3(file_path).info.length
+    if transition_time > length_in_seconds:
+        transition_time = length_in_seconds * 0.5
 
     # Gradually increase the volume over 15 minutes in a separate thread
     gradually_change_volume(0.0, 1.0, transition_time)

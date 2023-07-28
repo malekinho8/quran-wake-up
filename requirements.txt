@@ -5,4 +5,5 @@ pydub
 moviepy
 openai
 tqdm
+mutagen
 TheQuranModule
