@@ -428,7 +428,7 @@ def play_audio(file_path_or_url, transition_time=900):
     pygame.mixer.music.play()
 
     # if the transition time is longer than the audio, set it to the audio length
-    length_in_seconds = mp3(file_path).info.length
+    length_in_seconds = mp3.MP3(file_path).info.length
     if transition_time > length_in_seconds:
         transition_time = length_in_seconds * 0.5
 
