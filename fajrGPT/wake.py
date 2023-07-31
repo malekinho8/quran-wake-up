@@ -3,9 +3,7 @@ import sys; sys.path.append('./')
 import click
 import youtube_dl
 import pygame
-from pydub import AudioSegment
-from threading import Thread
-from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
+import numpy as np
 import time
 import subprocess
 import requests
@@ -15,6 +13,10 @@ import tempfile
 import mutagen.mp3 as mp3
 from tqdm import tqdm
 from Quran_Module import Project_Quran
+from scipy.signal import butter, lfilter
+from pydub import AudioSegment
+from threading import Thread
+from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 COMPLETIONS_MODEL = "gpt-3.5-turbo"
@@ -27,8 +29,9 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.', default=600)
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
 @click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses. Note this option only applies if the --surah option is not None.', default=False)
+@click.option('--low-pass', required=False, help='Whether or not to apply a low pass filter to the audio.', default=True)
 
-def main(url, time, output, names_flag, transition_time=600, surah=None, english=False):
+def main(url, time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=True):
     # Check surah option
     if surah:
         # make the output file name the same as the surah
@@ -44,6 +47,10 @@ def main(url, time, output, names_flag, transition_time=600, surah=None, english
 
     # test audio
     test_audio(f'{output}.mp3',output,flag)
+
+    # apply low pass filter to the audio
+    if low_pass:
+        apply_low_pass_filter(f'{output}.mp3')
 
     # convert time to seconds
     countdown_seconds = convert_to_seconds(time)
@@ -504,6 +511,40 @@ def download_file_and_sleep(url, time_to_sleep=0.5):
     time.sleep(time_to_sleep)
     return result
 
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
+def array_to_audio_segment(np_array, audio):
+    # Scale numpy array and convert to a list of integers
+    int_array = np.int16(np_array * 2**15)
+    return audio._spawn(int_array.tobytes())
+
+def apply_low_pass_filter(mp3_filename, cutoff=10000, order=5, fs=44100):
+    # Read the mp3 file
+    audio = AudioSegment.from_mp3(mp3_filename)
+
+    # Convert to numpy array
+    np_array = audio.get_array_of_samples()
+
+    # divide by max value to normalize the data
+    np_array = np_array / np.max(np.abs(np_array))
+
+    # Apply the low pass filter
+    filtered = butter_lowpass_filter(np_array, cutoff, fs, order)
+
+    # Convert the numpy array back to an audio segment
+    filtered_audio = array_to_audio_segment(filtered, audio)
+
+    # Export the audio segment as an mp3 file
+    filtered_audio.export(mp3_filename, format="mp3")
 
 if __name__ == "__main__":
     main()
