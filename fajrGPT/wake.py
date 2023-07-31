@@ -5,7 +5,7 @@ import youtube_dl
 import pygame
 from pydub import AudioSegment
 from threading import Thread
-from fajrGPT.quran_metadata import quran_chapter_to_verse
+from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
 import time
 import subprocess
 import requests
@@ -26,14 +26,17 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
 @click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.', default=600)
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
-# TODO: add option for including english translation of each surah if the user selects the surah option. Perhaps use a natural language generation model to generate the translation from the english translation of the Quran verses.
+@click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses. Note this option only applies if the --surah option is not None.', default=False)
 
-def main(url, time, output, names_flag, transition_time=600, surah=None):
+def main(url, time, output, names_flag, transition_time=600, surah=None, english=False):
     # Check surah option
     if surah:
         # make the output file name the same as the surah
         output = 'quran-' + '{:03d}'.format(int(surah))
-        flag = download_surah(surah, output)
+        if not english:
+            flag = download_surah(surah, output)
+        else:
+            flag = download_surah_with_english(surah, output)
     else:
         # Download video
         flag = download_video(url, output)
@@ -78,6 +81,28 @@ def main(url, time, output, names_flag, transition_time=600, surah=None):
     # return back to the main thread
     play_audio_thread.join()
 
+def download_surah_with_english(surah, output):
+    # check if the output file already exists
+    if os.path.exists(f'{output}.mp3'):
+        # if the output file exists, then return True
+        return True
+    else:        
+        # get the url directly from thechosenone.info
+        url = quran_surah_with_english_to_mp3_url(surah)
+
+        # download the verse audio and sleep for 0.5 seconds between each download
+        file_path = download_file_and_sleep(url,0.5)
+
+        # combine the audio files
+        combined_audio = AudioSegment.empty()
+        combined_audio += AudioSegment.from_mp3(file_path)
+
+        # save the combined audio file
+        combined_audio.export(f'{output}-english.mp3', format="mp3")
+
+        # return False
+        return False
+
 def download_surah(surah, output):
     # check if the output file already exists
     if os.path.exists(f'{output}.mp3'):
@@ -111,13 +136,6 @@ def play_quran_verses_audio(verses,transition_time=0.5):
     # convert verses to urls
     urls = [quran_verse_to_mp3_url(verse) for verse in verses]
 
-    # TODO: find mp3 url for the english translation of each verse and append it to the urls list depending on an option the user selects
-    # if include_english_translation:
-    ## if insert_translation_after_verse:
-    ### urls.append(english_translation_url)
-    ## elif insert_translation_within_verse:
-    ### urls.insert(1,english_translation_url)
-
     # download the verse audio
     file_paths = [download_file_and_sleep(url,0.5) for url in urls]
 
@@ -145,6 +163,16 @@ def combine_audio_from_files(file_paths):
 
     # return the path to the temporary file
     return temp_file.name
+
+def quran_surah_with_english_to_mp3_url(surah):
+    # convert surah to int and get the tag from the quran_chapter_to_tag dictionary
+    surah = int(surah)
+    tag = surah_number_to_name_tag[surah]
+
+    # get the url of the mp3 file
+    url = f'https://thechosenone.info/wp-content/uploads/2014/09/{tag}.mp3'
+
+    return url
 
 def quran_verse_to_mp3_url(verse):
     # get the chapter and verse number
