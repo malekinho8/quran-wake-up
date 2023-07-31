@@ -36,6 +36,7 @@ def main(url, time, output, names_flag, transition_time=600, surah=None, english
         if not english:
             flag = download_surah(surah, output)
         else:
+            output += '-english'
             flag = download_surah_with_english(surah, output)
     else:
         # Download video
@@ -98,7 +99,7 @@ def download_surah_with_english(surah, output):
         combined_audio += AudioSegment.from_mp3(file_path)
 
         # save the combined audio file
-        combined_audio.export(f'{output}-english.mp3', format="mp3")
+        combined_audio.export(f'{output}.mp3', format="mp3")
 
         # return False
         return False
