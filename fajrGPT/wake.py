@@ -29,9 +29,9 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.', default=600)
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
 @click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses. Note this option only applies if the --surah option is not None.', default=False)
-@click.option('--low-pass', required=False, help='Whether or not to apply a low pass filter to the audio.', default=True)
+@click.option('--low-pass', required=False, help='Amount of low-pass to apply to the audio (float (KHz) or None). Default is 10 (KHz).', default=10)
 
-def main(url, time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=True):
+def main(url, time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=10):
     # Check surah option
     if surah:
         # make the output file name the same as the surah
@@ -50,7 +50,8 @@ def main(url, time, output, names_flag, transition_time=600, surah=None, english
 
     # apply low pass filter to the audio
     if low_pass:
-        apply_low_pass_filter(f'{output}.mp3')
+        cutoff_filter = float(low_pass) * 1000
+        apply_low_pass_filter(f'{output}.mp3', cutoff_filter)
 
     # convert time to seconds
     countdown_seconds = convert_to_seconds(time)
@@ -527,7 +528,7 @@ def array_to_audio_segment(np_array, audio):
     int_array = np.int16(np_array * 2**15)
     return audio._spawn(int_array.tobytes())
 
-def apply_low_pass_filter(mp3_filename, cutoff=10000, order=5, fs=44100):
+def apply_low_pass_filter(mp3_filename, cutoff_filter, order=5, fs=44100):
     # Read the mp3 file
     audio = AudioSegment.from_mp3(mp3_filename)
 
@@ -538,7 +539,7 @@ def apply_low_pass_filter(mp3_filename, cutoff=10000, order=5, fs=44100):
     np_array = np_array / np.max(np.abs(np_array))
 
     # Apply the low pass filter
-    filtered = butter_lowpass_filter(np_array, cutoff, fs, order)
+    filtered = butter_lowpass_filter(np_array, cutoff_filter, fs, order)
 
     # Convert the numpy array back to an audio segment
     filtered_audio = array_to_audio_segment(filtered, audio)
