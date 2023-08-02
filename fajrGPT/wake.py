@@ -23,7 +23,7 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 
 @click.command()
 @click.option('--url', required=True, help='YouTube URL containing desired audio data.')
-@click.option('--time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
+@click.option('--countdown-time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--output', required=True, help='Name of the output file.')
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
 @click.option('--transition-time', required=False, help='Time in seconds for the transition between the output audio and the Quran verses.', default=600)
@@ -31,7 +31,7 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses. Note this option only applies if the --surah option is not None.', default=False)
 @click.option('--low-pass', required=False, help='Amount of low-pass to apply to the audio (float (KHz) or None). Default is 10 (KHz).', default=10)
 
-def main(url, time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=10):
+def main(url, countdown_time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=10):
     # Check surah option
     if surah:
         # make the output file name the same as the surah
@@ -54,20 +54,33 @@ def main(url, time, output, names_flag, transition_time=600, surah=None, english
         apply_low_pass_filter(f'{output}.mp3', cutoff_filter)
 
     # convert time to seconds
-    countdown_seconds = convert_to_seconds(time)
+    countdown_seconds = convert_to_seconds(countdown_time)
 
-    # Start countdown
-    countdown(countdown_seconds)
+    # Start countdown on a separate thread
+    countdown_thread = Thread(target=countdown, args=(countdown_seconds,))
+    countdown_thread.start()
 
     # Play audio with fade-in effect on a separate thread
     play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',transition_time))
     play_audio_thread.start()
 
     # display a name of Allah
-    get_name_of_allah_and_explanation(names_flag)
+    name_of_allah_thread = Thread(target=get_name_of_allah_and_explanation, args=(names_flag,))
+    name_of_allah_thread.start()
+
+    time.sleep(5)
+
+    # wait for the countdown to finish
+    while not countdown_finished:
+        time.sleep(1)
+
+    # wait for the user to finish reading the names of Allah
+    while not names_of_allah_finished:
+        time.sleep(1)
 
     # stop the misharay audio once the user has finished reading the name of Allah on a separate thread
-    stop_audio(5)
+    stop_audio_thread = Thread(target=stop_audio, args=(5,))
+    stop_audio_thread.start()
 
     # select the quran verses
     versesQM, verses = select_quran_verse()
@@ -248,17 +261,30 @@ def test_audio(file_path,output,converted_flag):
         print(f'{output}.mp3 has already been downloaded and converted.')
 
 def countdown(countdown_seconds):
+    # specify a global variable to store if the countdown has finished or not
+    global countdown_finished
+    countdown_finished = False
+
     # use tqdm to display the countdown progress
     print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n\n\n')
     # print the current time in HH:MM format
     print(f'\n\nSTART TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
     for i in tqdm(range(int(countdown_seconds))):
         time.sleep(1)
+    countdown_finished = True
     print('\n\n\n\n ---------------- COUNTDOWN COMPLETE ----------------')
     # print the current time in HH:MM format
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
 def get_name_of_allah_and_explanation(names_flag):
+    # specify a global variable to store if the reader has finished reading the names of Allah
+    global names_of_allah_finished
+    names_of_allah_finished = False
+
+    # wait for the countdown to finish
+    while not countdown_finished:
+        time.sleep(1)
+
     if not names_flag:
         return None
     else:
@@ -302,6 +328,8 @@ def get_name_of_allah_and_explanation(names_flag):
         print(f'Explanation: {explanation}\n\n\n\n')
         print(f'When you are ready to begin, press ENTER.')
         input()
+
+        names_of_allah_finished = True
 
 def get_explanations(verses_Quran_Module,verses,countdown_seconds):
     # Depending on the length of the countdown, select the number of verses to display
@@ -443,6 +471,10 @@ def gradually_change_volume(start_volume, end_volume, duration):
             break
 
 def play_audio(file_path_or_url, transition_time=900):
+    # wait for the countdown to finish
+    while not countdown_finished:
+        time.sleep(1)
+
     global stop_audio_called
     stop_audio_called = False
     file_path = ''
