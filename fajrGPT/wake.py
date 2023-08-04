@@ -56,9 +56,17 @@ def main(url, countdown_time, output, names_flag, transition_time=600, surah=Non
     # convert time to seconds
     countdown_seconds = convert_to_seconds(countdown_time)
 
-    # Start countdown on a separate thread
+    # Create threads for audio processing and countdown
+    audio_thread = Thread(target=alarm_audio_processing, args=(surah, english, output, low_pass, url))
     countdown_thread = Thread(target=countdown, args=(countdown_seconds,))
+
+    # Start both threads
+    audio_thread.start()
     countdown_thread.start()
+
+    # Wait for both threads to finish
+    audio_thread.join()
+    countdown_thread.join()
 
     # Play audio with fade-in effect on a separate thread
     play_audio_thread = Thread(target=play_audio, args=(f'{output}.mp3',transition_time))
@@ -68,15 +76,8 @@ def main(url, countdown_time, output, names_flag, transition_time=600, surah=Non
     name_of_allah_thread = Thread(target=get_name_of_allah_and_explanation, args=(names_flag,))
     name_of_allah_thread.start()
 
-    time.sleep(5)
-
-    # wait for the countdown to finish
-    while not countdown_finished:
-        time.sleep(1)
-
-    # wait for the user to finish reading the names of Allah
-    while not names_of_allah_finished:
-        time.sleep(1)
+    # wait for allah thread to finish
+    name_of_allah_thread.join()
 
     # stop the misharay audio once the user has finished reading the name of Allah on a separate thread
     stop_audio_thread = Thread(target=stop_audio, args=(5,))
@@ -85,23 +86,49 @@ def main(url, countdown_time, output, names_flag, transition_time=600, surah=Non
     # select the quran verses
     versesQM, verses = select_quran_verse()
 
+    # get the explanations on a separate thread
+    explanations_thread = Thread(target=get_explanations, args=(versesQM, verses, countdown_seconds,))
+    explanations_thread.start()
+
     # print the verses selected
     print(f'\n\nQuran Verses Selected:\n')
     for verse in verses:
         print(f'{verse}')
+
+    # wait for the stop audio thread to finish
+    stop_audio_thread.join()
     
     # play the audio of the quran verses
     play_audio_thread = Thread(target=play_quran_verses_audio, args=(verses,0.5))
     play_audio_thread.start()
-
-    # get the explanations of the quran verses
-    get_explanations(versesQM, verses, countdown_seconds)
 
     # stop the audio once the user has completed reading the verses
     stop_audio()
 
     # return back to the main thread
     play_audio_thread.join()
+
+def alarm_audio_processing(surah, english, output, low_pass, yt_url):
+    # Check surah option
+    if surah:
+        # make the output file name the same as the surah
+        output = 'quran-' + '{:03d}'.format(int(surah))
+        if not english:
+            flag = download_surah(surah, output)
+        else:
+            output += '-english'
+            flag = download_surah_with_english(surah, output)
+    else:
+        # Download video
+        flag = download_video(yt_url, output)
+
+    # test audio
+    test_audio(f'{output}.mp3', output, flag)
+
+    # apply low pass filter to the audio
+    if low_pass:
+        cutoff_filter = float(low_pass) * 1000
+        apply_low_pass_filter(f'{output}.mp3', cutoff_filter)
 
 def download_surah_with_english(surah, output):
     # check if the output file already exists
@@ -277,14 +304,6 @@ def countdown(countdown_seconds):
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
 def get_name_of_allah_and_explanation(names_flag):
-    # specify a global variable to store if the reader has finished reading the names of Allah
-    global names_of_allah_finished
-    names_of_allah_finished = False
-
-    # wait for the countdown to finish
-    while not countdown_finished:
-        time.sleep(1)
-
     if not names_flag:
         return None
     else:
@@ -328,8 +347,6 @@ def get_name_of_allah_and_explanation(names_flag):
         print(f'Explanation: {explanation}\n\n\n\n')
         print(f'When you are ready to begin, press ENTER.')
         input()
-
-        names_of_allah_finished = True
 
 def get_explanations(verses_Quran_Module,verses,countdown_seconds):
     # Depending on the length of the countdown, select the number of verses to display
@@ -440,6 +457,10 @@ def query_gpt(prompt):
     return response['choices'][0]['message']['content']
 
 def gradually_change_volume(start_volume, end_volume, duration):
+    # specify a global variable to indicate whether or not the audio has finished changing volume
+    global finished_changing_volume
+    finished_changing_volume = False
+
     # Compute the number of steps and the change in volume per step
     steps = int(duration * 100)  # Multiply by 100 to allow for hundredths of seconds
     delay = 0.01  # Delay for each step
