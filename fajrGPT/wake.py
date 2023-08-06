@@ -30,8 +30,9 @@ COMPLETIONS_MODEL = "gpt-3.5-turbo"
 @click.option('--surah', required=False, help='Specific Surah from the Quran. Should be given as integer.')
 @click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses. Note this option only applies if the --surah option is not None.', default=False)
 @click.option('--low-pass', required=False, help='Amount of low-pass to apply to the audio (float (KHz) or None). Default is 10 (KHz).', default=10)
+@click.option('--gpt-model-type', required=False, help='Which GPT model to use for the prompt responses from OpenAI.', default="gpt-4-0314")
 
-def main(url, countdown_time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=10):
+def main(url, countdown_time, output, names_flag, transition_time=600, surah=None, english=False, low_pass=10, gpt_model_type="gpt-4-0314"):
     # Check surah option
     if surah:
         # make the output file name the same as the surah
