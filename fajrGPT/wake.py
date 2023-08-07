@@ -80,6 +80,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     selected_quran_audio_file = quran_audio_queue.get()[0]
     alarm_output_file = alarm_out_queue.get()[0] + '.mp3'
 
+    # TODO: NEED TO FIGURE OUT WHY THIS DOESN'T WORK WITH THE SELECTED QURAN VERSE AUDIO, BUT NOT THE OTHER AUDIO....
     # process the selected quran audio file on a separate thread
     # filter_selected_audio_thread = Thread(target=apply_low_pass_filter,args=(selected_quran_audio_file,low_pass))
     # filter_selected_audio_thread.start()
@@ -112,7 +113,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     display_quran_verse_explanations(verse_texts,explanations,verses)
 
     # stop the audio once the user has completed reading the verses
-    stop_audio()
+    stop_audio(5,)
 
     # return back to the main thread
     play_audio_thread.join()
