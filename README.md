@@ -2,15 +2,18 @@
 
 ---
 
-This Python application assists in helping you wake up for Fajr prayer by providing 3 interactive verses + explanations from the Quran followed by a soothing Islamic prayer fade-in and fade-out [audio file from YouTube](https://www.youtube.com/watch?v=zlOKoHk9W0I). The program uses OpenAI's GPT-3.5 Turbo model to produce verses and corrrsponding Tafsir (explanation).
+This Python Command-Line application assists in helping you wake up for Fajr prayer by providing automatically selected verses + explanations from the Quran after a set alarm time along with a soothing Islamic prayer fade-in and fade-out from [Mishari bin Rashid Alafasy](https://en.wikipedia.org/wiki/Mishari_bin_Rashid_Alafasy). The program uses the [Quran Module](https://github.com/UBISOFT-1/Quran_Module) to obtain Quran verses in English as well as OpenAI's API GPT models to produce corresponding Tafsir (explanation).
 
 ## Features
 
-- Downloads audio from a provided YouTube URL.
-- Plays the downloaded audio after a user-specified countdown time (hours), with volume gradually increasing over a 15-minute period.
-- Displays verses from the Quran and provides corresponding explanations.
+- Plays Alafsay's Quran recitation audio for user-selected Surah (default is Surah Al-Fathiha) from [Tahfeem](https://islamicstudies.info/tafheem.php)
+- Includes option to play Alafsay's Quranic recitation with its corresponding English translation obtained from [The Chosen One](https://thechosenone.info/al-quran-with-english-translation/)
+- Plays the downloaded audio after a user-specified countdown time (i.e. 10s, 15m, 7h), with volume gradually fading in.
+- Option to select and display a Name of Allah and provide corresponding explanation of its meaning with the GPT API
+- Displays automatically selected verses from the Quran and provides corresponding explanations.
+- Depending on the length of the countdown, one, two, or three verses will be selected for display
 - After each explanation, the program waits for the user to press Enter before proceeding.
-- Once all explanations are provided, the audio volume gradually decreases over a 5-second period.
+- Once all explanations are provided, the audio volume gradually fades out over a 5-second period.
 
 ## Usage
 
@@ -22,29 +25,28 @@ This Python application assists in helping you wake up for Fajr prayer by provid
     ```
 2. Alternatively, install one dependency manually and `fajrGPT` through PyPI:
     ```python
-    pip install git+https://github.com/ytdl-org/youtube-dl.git fajrGPT
+    pip install git+https://github.com/UBISOFT-1/Quran_Module.git fajrGPT
     ```
 3. Run the main.py script, passing the required parameters:
     ```bash
-    fajrGPT --url <YouTube URL> --hours <Hours for Countdown> --output <Output filename>
+    fajrGPT --countdown-time <Seconds, Minutes, or Hours until Alarm> --surah <Which Surah (number) to play for the alarm, default is 1>
     ```
-    Replace `<YouTube URL>`, `<Hours for Countdown>`, and `<Output filename>` with appropriate values.
 
 ## Required Parameters
 
-- `--url`: The URL of the YouTube video to download the audio from.
-- `--hours`: The countdown hours before the YouTube audio will play.
-- `--output`: The name of the output file (audio).
+- `--countdown-time`: The amount of time 
 
 ## Dependencies
 
 - Python 3.8 or later.
 - `click`
-- `youtube_dl`
 - `pygame`
 - `pydub`
 - `moviepy`
 - `openai`
+- `scipy`
+- `mutagen`
+- `TheQuranModule`
 
 ## Notes
 

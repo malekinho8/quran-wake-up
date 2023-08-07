@@ -1,8 +1,8 @@
 click
-git+https://github.com/ytdl-org/youtube-dl.git
 pygame
 pydub
 moviepy
+scipy
 openai
 tqdm
 mutagen
