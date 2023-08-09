@@ -344,7 +344,7 @@ def get_name_of_allah_and_explanation(gpt_model_type, allah_queue):
     prompt = f"""
 
     For the name of Allah below, please do the following: First break down the word into its individual letters (remember that Arabic reads from right to left), giving their approximate equivalent in the english language.
-    Then, using the letters identified, give a few example sentences that use a word with similar letters, and then try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
+    Then, using the letters identified, give a few simple example sentences in Arabic (with English translations) that use a word with similar letters, and then try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
     
     Name of Allah: {name_of_allah_arabic}\nExplanation: 
     
