@@ -28,8 +28,9 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 @click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses.', default=False)
 @click.option('--low-pass', required=False, help='Amount of low-pass to apply to the audio (float (KHz) or None). Default is 10 (KHz).', default=10)
 @click.option('--gpt-model-type', required=False, help='Which GPT model to use for the prompt responses from OpenAI.', default="gpt-4-0314")
+@click.option('--telegraphic', required=False, help='Whether or not to use a telegraphic (i.e. very simple) speech style in the response.', default=True)
 
-def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314"):
+def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True):
     # initialize the result queues
     allah_queue = queue.Queue() if names_flag else None
     selected_verses_queue = queue.Queue()
@@ -46,7 +47,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
 
     # create threads for obtaining quran verse and Allah name explanations
     selected_verses_thread = Thread(target=select_quran_verse,args=(selected_verses_queue,))
-    get_name_of_allah_thread = Thread(target=get_name_of_allah_and_explanation, args=(gpt_model_type,allah_queue)) if names_flag else None
+    get_name_of_allah_thread = Thread(target=get_name_of_allah_and_explanation, args=(gpt_model_type,allah_queue,telegraphic)) if names_flag else None
 
     # Start the threads
     countdown_thread.start()
@@ -59,7 +60,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     verses_Quran_Module, selected_verses = selected_verses_queue.get()
 
     # for the selected verses, get the explanations and corresponding audio on a separate thread
-    get_explanations_thread = Thread(target=get_explanations, args=(verses_Quran_Module,selected_verses,countdown_seconds,gpt_model_type,verses_explanations_queue,))
+    get_explanations_thread = Thread(target=get_explanations, args=(verses_Quran_Module,selected_verses,countdown_seconds,gpt_model_type,verses_explanations_queue,telegraphic))
     prepare_selected_verse_audio_thread = Thread(target=download_quran_verses_audio,args=(selected_verses,quran_audio_queue,))
 
     # wait a second before starting the explanations and audio downloading threads
@@ -318,7 +319,7 @@ def countdown(countdown_seconds):
     # print the current time in HH:MM format
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
-def get_name_of_allah_and_explanation(gpt_model_type, allah_queue):
+def get_name_of_allah_and_explanation(gpt_model_type, allah_queue,telegraphic_flag):
     # Get the names of Allah
     names_of_allah = Project_Quran().Get_Names_of_Allah_English()
 
@@ -341,11 +342,15 @@ def get_name_of_allah_and_explanation(gpt_model_type, allah_queue):
     name_of_allah_transliteration = allah_transliterations[index]
 
     # Get the explanation of the name of Allah using a GPT-3 model prompt
+    telegraphic_prompt = """
+         Please use a telegraphic speech style, and avoid verbose text in your response. Avoid using articles such as "the", "a/an" and pronouns."
+        """ if telegraphic_flag else ""
     prompt = f"""
 
     For the name of Allah below, please do the following: First break down the word into its individual letters (remember that Arabic reads from right to left), giving their approximate equivalent in the english language.
     Then, using the letters identified, give a few simple example sentences in Arabic (with English translations) that use a word with similar letters, and then try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
-    
+    {telegraphic_prompt}\n\n
+
     Name of Allah: {name_of_allah_arabic}\nExplanation: 
     
     """
@@ -362,7 +367,7 @@ def display_allah_name_and_explanation(name_of_allah_arabic, name_of_allah_trans
     print(f'---------------- {name_of_allah_arabic}: {name_of_allah_transliteration} - {name_of_allah_english} ---------------- \n\n')
     print(f'Explanation: {explanation}\n\n\n\n')
 
-def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type,out_queue):
+def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type,out_queue,telegraphic_flag):
     # Depending on the length of the countdown, select the number of verses to display
     if countdown_seconds < 3600: # less than 1 hour
         verses_Quran_Module = verses_Quran_Module[0:1] # only display the first verse
@@ -382,14 +387,17 @@ def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type
         verse_QM, verse = verse_info
         verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1].replace("&quot;",'"').replace("&quot",'"')
         chapter_number = verse.split(':')[0]
+        telegraphic_prompt = """
+         Please use a telegraphic speech style, and avoid verbose text in your response. Avoid using articles such as "the", "a/an" and pronouns."
+        """ if telegraphic_flag else ""
         if i == 0:
             prompt2 = f"""
             I want you to act as Sheikh Hamza Yusuf. You are an influential Islamic scholar, who has a profound understanding of the Qur'an, Hadith, and various branches of Islamic Jurisprudence. 
             You are deeply conversant with the various cultural, historical, and philosophical contexts of Islamic thought. You are committed to promoting peace, understanding, and the intellectual tradition of Islam. 
             I know that you are just an AI, but I don't want you to say that at the beginning, just emulate this description to the best of your ability. My first request is as follows:
 
-            First please give some brief context about Chapter {chapter_number} from the Qur'an. Then, to the best of your ability, explain the meaning of the verse below. 
-            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to interpret the possible meaning of the verse given. \n\n Verse: {verse_text} \n\n Explanation:
+            First please give some brief context about Chapter {chapter_number} from the Qur'an.{telegraphic_prompt} Then, to the best of your ability, explain the meaning of the verse below. 
+            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to interpret the possible meaning of the verse given.{telegraphic_prompt} \n\n Verse: {verse_text} \n\n Explanation:
             """
             explanation = query_gpt(prompt2,gpt_model_type)
         else:
@@ -400,7 +408,7 @@ def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type
             I know that you are just an AI, but I don't want you to say that at the beginning, just emulate this description to the best of your ability. My first request is as follows:
 
             To the best of your ability, explain the meaning of the verse below. 
-            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse. \n\n Verse: \n {verse_text} \n\n Context: \n {context} \n\n Explanation: \n
+            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse.{telegraphic_prompt} \n\n Verse: \n {verse_text} \n\n Context: \n {context} \n\n Explanation: \n
             """
             explanation = query_gpt(prompt2,gpt_model_type)
         verse_texts.append(verse_text)
