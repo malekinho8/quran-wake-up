@@ -17,6 +17,46 @@ This Python Command-Line application assists in helping you wake up for Fajr pra
 
 ## Usage
 
+### Installing FFmpeg
+
+FFmpeg is a necessary dependency for this package in order to play audio mp3 files. Follow the instructions below based on your operating system:
+
+#### Windows
+
+##### *Option 1: Using Conda (recommended for Conda users)*
+If you have Anaconda or Miniconda installed, you can install FFmpeg using the following command:
+
+```
+conda install -c conda-forge ffmpeg
+```
+
+##### *Option 2: Manual Installation*
+1. Go to the FFmpeg official [download page](https://ffmpeg.org/download.html) and download the Windows version.
+2. Extract the ZIP archive.
+3. Add the path to the `bin` directory (where `ffmpeg.exe` is located) to your system's PATH variable.
+
+#### macOS
+
+Using Homebrew (recommended):
+
+```
+brew install ffmpeg
+```
+
+Or follow the manual installation process similar to Windows by downloading from the FFmpeg official site.
+
+#### Linux (e.g., Ubuntu)
+
+Using the package manager:
+
+```
+sudo apt install ffmpeg
+```
+
+For other Linux distributions, adjust the command according to your package manager.
+
+### CLI Installation with PyPI Distribution
+
 1. Clone repo and install packages (for developers):
     ```bash
     git clone https://github.com/malekinho8/quran-wake-up.git
@@ -25,7 +65,7 @@ This Python Command-Line application assists in helping you wake up for Fajr pra
     ```
 2. Alternatively, install one dependency manually and `fajrGPT` through PyPI:
     ```python
-    pip install git+https://github.com/UBISOFT-1/Quran_Module.git fajrGPT
+    pip install git+https://github.com/malekinho8/quran-module.git fajrGPT
     ```
 3. Run the main.py script, passing the required parameters:
     ```bash
@@ -38,7 +78,7 @@ This Python Command-Line application assists in helping you wake up for Fajr pra
 
 ## Dependencies
 
-- Python 3.8 or later.
+- Python 3.x
 - `click`
 - `pygame`
 - `pydub`
