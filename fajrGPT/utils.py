@@ -1,6 +1,5 @@
 import os
 import sys; sys.path.append('./')
-import click
 import pygame
 import numpy as np
 import time
@@ -9,13 +8,11 @@ import requests
 import openai
 import random
 import tempfile
-import queue
 import mutagen.mp3 as mp3
 from tqdm import tqdm
 from Quran_Module import Project_Quran
 from scipy.signal import butter, lfilter
 from pydub import AudioSegment
-from threading import Thread
 from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
 
 def print_selected_verses(verses:list):
