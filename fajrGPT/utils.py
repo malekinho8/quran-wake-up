@@ -10,6 +10,8 @@ import random
 import tempfile
 import mutagen.mp3 as mp3
 import math
+import pkg_resources
+import tempfile
 from tqdm import tqdm
 from Quran_Module import Project_Quran
 from scipy.signal import butter, lfilter
@@ -19,12 +21,18 @@ from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_
 def play_noise(noise_type, crossfade_duration=2000, crossfade_point=0.1666, audio_length=120):
     # set the file path depending on the noise type given
     if noise_type == 'brown':
-        file_path = 'fajrGPT/assets/brown.mp3'
+        # Use resource_stream to access the file
+        stream = pkg_resources.resource_stream('fajrGPT', 'assets/brown.mp3')
+
+        # Create a temporary file and write the stream to it
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(stream.read())
+            temp_file_path = tmp_file.name
     else:
         raise Exception(f'Noise type {noise_type} is not supported yet.')
 
     # being audio playing loop
-    play_audio_loop(file_path, crossfade_duration, crossfade_point)
+    play_audio_loop(temp_file_path, crossfade_duration, crossfade_point)
 
 def print_selected_verses(verses:list):
     # print the verses selected
