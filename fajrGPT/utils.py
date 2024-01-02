@@ -9,11 +9,22 @@ import openai
 import random
 import tempfile
 import mutagen.mp3 as mp3
+import math
 from tqdm import tqdm
 from Quran_Module import Project_Quran
 from scipy.signal import butter, lfilter
 from pydub import AudioSegment
 from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
+
+def play_noise(noise_type, crossfade_duration=2000, crossfade_point=0.1666, audio_length=120):
+    # set the file path depending on the noise type given
+    if noise_type == 'brown':
+        file_path = 'fajrGPT/assets/brown.mp3'
+    else:
+        raise Exception(f'Noise type {noise_type} is not supported yet.')
+
+    # being audio playing loop
+    play_audio_loop(file_path, crossfade_duration, crossfade_point)
 
 def print_selected_verses(verses:list):
     # print the verses selected
@@ -148,6 +159,16 @@ def quran_verse_to_mp3_url(verse):
 
     return url
 
+def create_looped_segment(audio_segment, num_loops, crossfade_duration):
+    # Initialize the looped segment with the first iteration
+    looped_segment = audio_segment
+
+    # Loop and concatenate with crossfade
+    for _ in range(1, num_loops):
+        looped_segment = looped_segment.append(audio_segment, crossfade=crossfade_duration)
+
+    return looped_segment
+
 def convert_to_seconds(time_str):
     # Get the number and the time unit (h/m/s)
     number = float(time_str[:-1])
@@ -182,6 +203,8 @@ def countdown(countdown_seconds):
     # specify a global variable to store if the countdown has finished or not
     global countdown_finished
     countdown_finished = False
+    global bypass_countdown_flag
+    bypass_countdown_flag = False
 
     # use tqdm to display the countdown progress
     print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n\n\n')
@@ -389,10 +412,102 @@ def gradually_change_volume(start_volume, end_volume, duration):
         if stop_audio_called:
             print("Stopping volume change due to stop_audio being called")
             break
+    
+def crossfade(c1, c2, fade_duration):
+    """
+    Performs a crossfade between two channels over a specified duration.
+    """
+    global stop_audio_called
+    steps = 200
+    volume_step = 1 / steps
+    step_duration = fade_duration / steps
 
-def play_audio(file_path_or_url, transition_time=900):
-    # wait for the countdown to finish
-    while not countdown_finished:
+    total_volume = 10 * math.log10(10 ** (c1.get_volume() / 10) + 10 ** (c2.get_volume() / 10))
+
+    for step in range(steps):
+        if stop_audio_called:
+            c1.fadeout(1000)
+            c2.fadeout(1000)
+            return
+        
+        c2.set_volume(step * volume_step)
+        c1_volume = min(-1.073 * c2.get_volume()**2 + 0.18*c2.get_volume() + 1, 1)  
+        # use the equation: x_{1} = -1.073 x_{2}^2 + 0.18x_2 + 0.95 determined experimentally
+        c1.set_volume(c1_volume)
+        time.sleep(step_duration / 1000)
+
+    c2.set_volume(1)
+    c1.stop()
+
+def play_audio_loop(mp3_path, fade_duration=2000, crossfade_point=0.166):
+    """
+    Plays an audio loop with crossfade using two channels. The loop continues until stop_audio is set to True.
+    """
+    # Initialize Pygame mixer
+    pygame.mixer.init()
+    audio = pygame.mixer.Sound(mp3_path)
+    audio_length_ms = audio.get_length() * 1000  # Length of the audio in milliseconds
+
+    global stop_audio_called
+    stop_audio_called = False
+    channel1 = pygame.mixer.Channel(1)
+    channel2 = pygame.mixer.Channel(2)
+
+    # Set the initial volume of channel 2 to 0 and start playing channel 1
+    channel2.set_volume(0)
+    channel1.set_volume(0)
+    channel1.play(audio, loops=0)
+    current_channel = 1
+    fade_in_channel(channel1, fade_duration)
+
+    # Begin a timer to track playback time
+    start_time = time.time()
+
+    while not stop_audio_called:
+        if current_channel == 1 and (time.time() - start_time) * 1000 > audio_length_ms * crossfade_point:
+            channel2.set_volume(0)
+            channel2.play(audio, loops=0)
+            crossfade(channel1, channel2, fade_duration)
+            current_channel = 2
+            start_time = time.time()
+        elif current_channel == 2 and (time.time() - start_time) * 1000 > audio_length_ms * crossfade_point:
+            channel1.set_volume(0)
+            channel1.play(audio, loops=0)
+            crossfade(channel2, channel1, fade_duration)
+            current_channel = 1
+            start_time = time.time()
+
+        time.sleep(1)
+    
+    channel1.fadeout(fade_duration)
+    channel2.fadeout(fade_duration)
+    time.sleep(fade_duration/1000)
+    channel1.stop()
+    channel2.stop()
+    
+def fade_in_channel(channel, fade_duration):
+    """
+    Gradually increases the volume of a channel to maximum over a specified duration.
+    """
+    global stop_audio_called
+    steps = 200
+    volume_step = 1 / steps
+    step_duration = fade_duration / steps
+
+    for step in range(steps):
+        if stop_audio_called:
+            channel.fadeout(1000)
+            return
+
+        channel.set_volume(step * volume_step)
+        time.sleep(step_duration / 1000)
+    
+    channel.set_volume(1)
+
+
+def play_audio(file_path_or_url, transition_time=900, max_volume=1):
+    # only start playing the audio once the countdown has finished OR if the user has specified a special flag to be true
+    while not countdown_finished and not bypass_countdown_flag:
         time.sleep(1)
 
     global stop_audio_called
@@ -422,7 +537,7 @@ def play_audio(file_path_or_url, transition_time=900):
         transition_time = length_in_seconds * 0.5
 
     # Gradually increase the volume over 15 minutes in a separate thread
-    gradually_change_volume(0.0, 1.0, transition_time)
+    gradually_change_volume(0.0, max_volume, transition_time)
 
     # Loop the audio until the stop_audio function is called
     while not stop_audio_called:
@@ -433,7 +548,11 @@ def play_audio(file_path_or_url, transition_time=900):
 
     # Delete the file if it was downloaded
     if file_path_or_url.startswith('http'):
-        os.remove(file_path)    
+        os.remove(file_path)
+
+def set_global_stop_audio_flag():
+    global stop_audio_called
+    stop_audio_called = True
 
 def stop_audio(transition_time=10):
     global stop_audio_called

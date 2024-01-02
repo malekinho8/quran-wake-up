@@ -18,8 +18,10 @@ check_ffmpeg()
 @click.option('--low-pass', required=False, help='Amount of low-pass to apply to the audio (float (KHz) or None). Default is 10 (KHz).', default=10)
 @click.option('--gpt-model-type', required=False, help='Which GPT model to use for the prompt responses from OpenAI.', default="gpt-4-0314")
 @click.option('--telegraphic', required=False, help='Whether or not to use a telegraphic (i.e. very simple) speech style in the response.', default=True)
+@click.option('--noise', required=False, default=False, help='Whether or not to play calming noise during the countdown.')
+@click.option('--noise-type', required=False, default='brown', help='Type of noise to play during the countdown. Options are: brown, pink, white, blue, violet, grey, or red.')
 
-def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True):
+def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True, noise=False, noise_type='brown'):
     # initialize the result queues
     allah_queue = queue.Queue() if names_flag else None
     selected_verses_queue = queue.Queue()
@@ -34,6 +36,13 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     prepare_alarm_audio_thread = Thread(target=alarm_audio_processing, args=(surah, english, low_pass, alarm_out_queue))
     countdown_thread = Thread(target=countdown, args=(countdown_seconds,))
 
+    # Create a thread for playing some noise during the countdown if the user has specified so
+    if noise:
+        play_noise_thread = Thread(target=play_noise, args=(noise_type,10000,0.5,))
+        max_alarm_volume = 0.05
+    else:
+        max_alarm_volume = 1.0
+
     # create threads for obtaining quran verse and Allah name explanations
     selected_verses_thread = Thread(target=select_quran_verse,args=(selected_verses_queue,))
     get_name_of_allah_thread = Thread(target=get_name_of_allah_and_explanation, args=(gpt_model_type,allah_queue,telegraphic)) if names_flag else None
@@ -41,6 +50,11 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     # Start the threads
     countdown_thread.start()
     selected_verses_thread.start()
+
+    # wait a second and then start the noise thread if it was specified
+    if noise:
+        time.sleep(1)
+        play_noise_thread.start()
 
     # wait for the selected verse thread to finish
     selected_verses_thread.join()
@@ -78,8 +92,13 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     # Wait for both threads to finish
     countdown_thread.join()
 
+    # stop the noise thread if it was started
+    if noise:
+        set_global_stop_audio_flag()
+        play_noise_thread.join()
+
     # Play alarm audio with fade-in effect on a separate thread
-    play_audio_thread = Thread(target=play_audio, args=(alarm_output_file,))
+    play_audio_thread = Thread(target=play_audio, args=(alarm_output_file, 900, max_alarm_volume,))
     play_audio_thread.start()
 
     # display the name of Allah and explanation
@@ -95,7 +114,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     stop_audio(5,)
 
     # play the audio of the quran verses with 5 second fade in
-    play_audio_thread = Thread(target=play_audio, args=(selected_quran_audio_file,))
+    play_audio_thread = Thread(target=play_audio, args=(selected_quran_audio_file, 900, max_alarm_volume,))
     play_audio_thread.start()
 
     # display the explanations

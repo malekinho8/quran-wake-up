@@ -17,3 +17,6 @@ sandbox/
 
 # .asd files
 *.asd
+
+# DS_Store
+.DS_Store
