@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fajrGPT",
-    version="1.6",
+    version="1.6.1",
     author="Malek Ibrahim",
     author_email="shmeek8@gmail.com",
     description=("A Python application to assist in waking up for Fajr prayer "
