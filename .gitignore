@@ -20,3 +20,6 @@ sandbox/
 
 # DS_Store
 .DS_Store
+
+# api_token
+api_token.txt

@@ -12,6 +12,10 @@ setup(
     long_description_content_type='text/markdown',
     url="https://github.com/malekinho8/quran-wake-up",
     packages=find_packages(),
+    package_data={
+        # Include all MP3 files in the 'assets' subdirectory
+        'fajrGPT': ['assets/*.mp3'],
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
