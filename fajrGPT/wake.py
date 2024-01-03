@@ -70,28 +70,12 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     get_explanations_thread = Thread(target=get_explanations, args=(verses_Quran_Module,selected_verses,countdown_seconds,gpt_model_type,verses_explanations_queue,telegraphic,scholar))
     prepare_selected_verse_audio_thread = Thread(target=download_quran_verses_audio,args=(selected_verses,quran_audio_queue,))
 
-    # wait a second before starting the explanations and audio downloading threads
+    # wait a second before starting the explanations and audio downloading threads while the countdown continues
     time.sleep(1)
     get_name_of_allah_thread.start() if names_flag else None
     get_explanations_thread.start()
     prepare_alarm_audio_thread.start()
     prepare_selected_verse_audio_thread.start()
-
-    # wait for the explanations threads to finish
-    get_name_of_allah_thread.join() if names_flag else None
-    get_explanations_thread.join()
-    prepare_alarm_audio_thread.join()
-
-    # fetch the results from the queue
-    name_of_allah_arabic, name_of_allah_transliteration, name_of_allah_english, explanation = allah_queue.get() if names_flag else None
-    verse_texts, explanations, verses = verses_explanations_queue.get()
-    selected_quran_audio_file = quran_audio_queue.get()[0]
-    alarm_output_file = alarm_out_queue.get()[0] + '.mp3'
-
-    # process the selected quran audio file on a separate thread
-    filter_selected_audio_thread = Thread(target=apply_low_pass_filter,args=( selected_quran_audio_file, float(low_pass * 1000) ))
-    filter_selected_audio_thread.start()
-    filter_selected_audio_thread.join()
 
     # Wait for both threads to finish
     countdown_thread.join()
@@ -100,10 +84,28 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     if noise:
         set_global_stop_audio_flag()
         play_noise_thread.join()
+    
+    # start playing the alarm audio
+    prepare_alarm_audio_thread.join() # join the thread.
+    selected_quran_audio_file = quran_audio_queue.get()[0]
+    alarm_output_file = alarm_out_queue.get()[0] + '.mp3'
+
+    # process the selected quran audio file on a separate thread
+    filter_selected_audio_thread = Thread(target=apply_low_pass_filter,args=( selected_quran_audio_file, float(low_pass * 1000) ))
+    filter_selected_audio_thread.start()
+    filter_selected_audio_thread.join()
 
     # Play alarm audio with fade-in effect on a separate thread
     play_audio_thread = Thread(target=play_audio, args=(alarm_output_file, quran_fadein_time, max_alarm_volume,))
     play_audio_thread.start()
+
+    # wait for the explanations threads to finish. if there are any errors the code will hang here after the countdown has finished and noise has stopped.
+    get_name_of_allah_thread.join() if names_flag else None
+    get_explanations_thread.join()
+
+    # fetch the gpt results from the queue
+    name_of_allah_arabic, name_of_allah_transliteration, name_of_allah_english, explanation = allah_queue.get() if names_flag else None
+    verse_texts, explanations, verses = verses_explanations_queue.get()
 
     # display the name of Allah and explanation
     display_allah_name_and_explanation(name_of_allah_arabic, name_of_allah_transliteration, name_of_allah_english, explanation) if names_flag else None

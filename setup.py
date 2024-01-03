@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fajrGPT",
-    version="1.6.5",
+    version="1.6.6",
     author="Malek Ibrahim",
     author_email="shmeek8@gmail.com",
     description=("A Python application to assist in waking up for Fajr prayer "
@@ -14,7 +14,7 @@ setup(
     packages=find_packages(),
     package_data={
         # Include all MP3 files in the 'assets' subdirectory as well as txt files in fajrGPT
-        'fajrGPT': ['assets/noise/*.mp3', 'assets/prompt/*.txt', 'assets/scholars/*.txt'],
+        'fajrGPT': ['assets/noise/*.mp3', 'assets/prompt/*.txt', 'assets/prompt/scholars/*.txt'],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",
