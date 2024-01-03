@@ -39,9 +39,11 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     # Create a thread for playing some noise during the countdown if the user has specified so
     if noise:
         play_noise_thread = Thread(target=play_noise, args=(noise_type,10000,0.5,))
-        max_alarm_volume = 0.05
+        max_alarm_volume = 0.04
+        quran_fadein_time = 60 # seconds
     else:
         max_alarm_volume = 1.0
+        quran_fadein_time = 900 # seconds
 
     # create threads for obtaining quran verse and Allah name explanations
     selected_verses_thread = Thread(target=select_quran_verse,args=(selected_verses_queue,))
@@ -98,7 +100,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
         play_noise_thread.join()
 
     # Play alarm audio with fade-in effect on a separate thread
-    play_audio_thread = Thread(target=play_audio, args=(alarm_output_file, 900, max_alarm_volume,))
+    play_audio_thread = Thread(target=play_audio, args=(alarm_output_file, quran_fadein_time, max_alarm_volume,))
     play_audio_thread.start()
 
     # display the name of Allah and explanation
@@ -114,7 +116,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     stop_audio(5,)
 
     # play the audio of the quran verses with 5 second fade in
-    play_audio_thread = Thread(target=play_audio, args=(selected_quran_audio_file, 900, max_alarm_volume,))
+    play_audio_thread = Thread(target=play_audio, args=(selected_quran_audio_file, quran_fadein_time, max_alarm_volume,))
     play_audio_thread.start()
 
     # display the explanations
