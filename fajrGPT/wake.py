@@ -20,8 +20,11 @@ check_ffmpeg()
 @click.option('--telegraphic', required=False, help='Whether or not to use a telegraphic (i.e. very simple) speech style in the response.', default=True)
 @click.option('--noise', required=False, default=False, help='Whether or not to play calming noise during the countdown.')
 @click.option('--noise-type', required=False, default='brown', help='Type of noise to play during the countdown. Options are: brown, pink, white, blue, violet, grey, or red.')
+@click.option('--max-noise-volume', required=False, default=1, help='Maximum volume of the noise audio.')
+@click.option('--max-alarm-volume', required=False, default=0.04, help='Maximum volume of the alarm audio.')
+@click.option('--scholar', required=False, default='hamza_yusuf', help='Which scholar to use for the Quran verse explanations. Options are: hamza_yusuf, nouman_ali_khan, or mufti_menk.')
 
-def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True, noise=False, noise_type='brown'):
+def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True, noise=False, noise_type='brown', max_noise_volume=1, max_alarm_volume=0.04, scholar='hamza_yusuf'):
     # initialize the result queues
     allah_queue = queue.Queue() if names_flag else None
     selected_verses_queue = queue.Queue()
@@ -38,8 +41,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
 
     # Create a thread for playing some noise during the countdown if the user has specified so
     if noise:
-        play_noise_thread = Thread(target=play_noise, args=(noise_type,10000,0.5,))
-        max_alarm_volume = 0.04
+        play_noise_thread = Thread(target=play_noise, args=(noise_type,10000,0.5,max_noise_volume,))
         quran_fadein_time = 60 # seconds
     else:
         max_alarm_volume = 1.0
@@ -65,7 +67,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     verses_Quran_Module, selected_verses = selected_verses_queue.get()
 
     # for the selected verses, get the explanations and corresponding audio on a separate thread
-    get_explanations_thread = Thread(target=get_explanations, args=(verses_Quran_Module,selected_verses,countdown_seconds,gpt_model_type,verses_explanations_queue,telegraphic))
+    get_explanations_thread = Thread(target=get_explanations, args=(verses_Quran_Module,selected_verses,countdown_seconds,gpt_model_type,verses_explanations_queue,telegraphic,scholar))
     prepare_selected_verse_audio_thread = Thread(target=download_quran_verses_audio,args=(selected_verses,quran_audio_queue,))
 
     # wait a second before starting the explanations and audio downloading threads

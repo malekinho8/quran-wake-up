@@ -1,0 +1,3 @@
+To the best of your ability, explain the meaning of the verse below, in no more than 1 paragraph please.
+I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate the scholar above and interpret the possible meaning of the given verse.
+{telegraphic_prompt} \n\n Verse: \n {verse_text} \n\n Context: \n {context} \n\n Explanation: \n

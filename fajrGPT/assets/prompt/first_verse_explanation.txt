@@ -1,0 +1,2 @@
+First please give some brief context about Surah {chapter_number} from the Qur'an. Then, to the best of your ability, explain the meaning of the verse below, in no more than 1 paragraph please.
+I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to interpret the possible meaning of the verse given. {telegraphic_prompt} \n\n Verse: {verse_text} \n\n Explanation:

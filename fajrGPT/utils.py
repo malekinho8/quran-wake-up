@@ -18,21 +18,41 @@ from scipy.signal import butter, lfilter
 from pydub import AudioSegment
 from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
 
-def play_noise(noise_type, crossfade_duration=2000, crossfade_point=0.1666, audio_length=120):
+def play_noise(noise_type, crossfade_duration=2000, crossfade_point=0.1666, audio_length=120, max_volume=1):
     # set the file path depending on the noise type given
-    if noise_type == 'brown':
+    try:
         # Use resource_stream to access the file
-        stream = pkg_resources.resource_stream('fajrGPT', 'assets/brown.mp3')
-
-        # Create a temporary file and write the stream to it
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-            tmp_file.write(stream.read())
-            temp_file_path = tmp_file.name
-    else:
-        raise Exception(f'Noise type {noise_type} is not supported yet.')
-
+        temp_file_path = access_package_file('fajrGPT', f'assets/noise/{noise_type}.mp3') 
+    except:
+        raise Exception(f'Error: {noise_type} is not supported (yet).')
     # being audio playing loop
-    play_audio_loop(temp_file_path, crossfade_duration, crossfade_point)
+    play_audio_loop(temp_file_path, crossfade_duration, crossfade_point, max_volume)
+    os.remove(temp_file_path)
+
+def access_package_file(package_name, file_path):
+    # Use resource_stream to access the file
+    stream = pkg_resources.resource_stream(package_name, file_path)
+
+    # Create a temporary file and write the stream to it
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(stream.read())
+        temp_file_path = tmp_file.name
+
+    return temp_file_path
+
+def access_and_read_package_file(package_name, file_path):
+    # Use resource_stream to access the file
+    stream = pkg_resources.resource_stream(package_name, file_path)
+
+    # Read the file
+    with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
+        tmp_file.write(stream.read())
+        tmp_file.seek(0)
+        temp_file_path = tmp_file.name
+        with open(temp_file_path, 'r') as f:
+            text = f.read()
+
+    return text
 
 def print_selected_verses(verses:list):
     # print the verses selected
@@ -225,6 +245,12 @@ def countdown(countdown_seconds):
     # print the current time in HH:MM format
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
+# define a function to open text files
+def open_text_file(file_path):
+    with open(file_path, 'r') as f:
+        text = f.read()
+    return text
+
 def get_name_of_allah_and_explanation(gpt_model_type, allah_queue,telegraphic_flag):
     # Get the names of Allah
     names_of_allah = Project_Quran().Get_Names_of_Allah_English()
@@ -248,18 +274,9 @@ def get_name_of_allah_and_explanation(gpt_model_type, allah_queue,telegraphic_fl
     name_of_allah_transliteration = allah_transliterations[index]
 
     # Get the explanation of the name of Allah using a GPT-3 model prompt
-    telegraphic_prompt = """
-         Please use a telegraphic speech style, and avoid verbose text in your response. Avoid using articles such as "the", "a/an" and pronouns."
-        """ if telegraphic_flag else ""
-    prompt = f"""
-
-    For the name of Allah below, please do the following: First break down the word into its individual letters (remember that Arabic reads from right to left), giving their approximate equivalent in the english language.
-    Then, using the letters identified, give a few simple example sentences in Arabic (with English translations) that use a word with similar letters, and then try to guess the meaning of the name. Finally, give a brief explanation of the significane of this particular name of Allah as it relates to the Quran.
-    {telegraphic_prompt}\n\n
-
-    Name of Allah: {name_of_allah_arabic}\nExplanation: 
-    
-    """
+    telegraphic_prompt = access_and_read_package_file('fajrGPT', 'assets/prompt/telegraphic.txt') if telegraphic_flag else ""
+    allah_prompt = access_and_read_package_file('fajrGPT', 'assets/prompt/allah_name_explanation.txt')
+    prompt = allah_prompt + "\n\n" + telegraphic_prompt + "\n\n" + f"Name of Allah: {name_of_allah_arabic}\nExplanation:"
 
     # Get the explanation of the name of Allah
     explanation = query_gpt(prompt, gpt_model_type)
@@ -273,7 +290,7 @@ def display_allah_name_and_explanation(name_of_allah_arabic, name_of_allah_trans
     print(f'---------------- {name_of_allah_arabic}: {name_of_allah_transliteration} - {name_of_allah_english} ---------------- \n\n')
     print(f'Explanation: {explanation}\n\n\n\n')
 
-def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type,out_queue,telegraphic_flag):
+def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type,out_queue,telegraphic_flag,scholar):
     # Depending on the length of the countdown, select the number of verses to display
     if countdown_seconds < 3600: # less than 1 hour
         verses_Quran_Module = verses_Quran_Module[0:1] # only display the first verse
@@ -288,35 +305,24 @@ def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type
     verse_texts = []
     explanations = []
 
+    # access the scholar prompt
+    scholar_prompt = access_and_read_package_file('fajrGPT', f'assets/prompt/scholars/{scholar}.txt')
+    telegraphic_prompt = access_and_read_package_file('fajrGPT', 'assets/prompt/telegraphic.txt') if telegraphic_flag else ""
+
     # Get the explanations
     for i, verse_info in enumerate(zip(verses_Quran_Module, verses)):
         verse_QM, verse = verse_info
         verse_text = Project_Quran().Get_Ayah_English(verse_QM).split('"')[1][0:-1].replace("&quot;",'"').replace("&quot",'"')
         chapter_number = verse.split(':')[0]
-        telegraphic_prompt = """
-         Please use a telegraphic speech style, and avoid verbose text in your response. Avoid using articles such as "the", "a/an" and pronouns."
-        """ if telegraphic_flag else ""
         if i == 0:
-            prompt2 = f"""
-            I want you to act as Sheikh Hamza Yusuf. You are an influential Islamic scholar, who has a profound understanding of the Qur'an, Hadith, and various branches of Islamic Jurisprudence. 
-            You are deeply conversant with the various cultural, historical, and philosophical contexts of Islamic thought. You are committed to promoting peace, understanding, and the intellectual tradition of Islam. 
-            I know that you are just an AI, but I don't want you to say that at the beginning, just emulate this description to the best of your ability. My first request is as follows:
-
-            First please give some brief context about Chapter {chapter_number} from the Qur'an.{telegraphic_prompt} Then, to the best of your ability, explain the meaning of the verse below. 
-            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to interpret the possible meaning of the verse given.{telegraphic_prompt} \n\n Verse: {verse_text} \n\n Explanation:
-            """
-            explanation = query_gpt(prompt2,gpt_model_type)
+            first_verse_prompt = access_and_read_package_file('fajrGPT', 'assets/prompt/first_verse_explanation.txt').format(chapter_number=chapter_number,telegraphic_prompt=telegraphic_prompt,verse_text=verse_text)
+            quran_prompt = scholar_prompt + "\n\n" + first_verse_prompt
+            explanation = query_gpt(quran_prompt,gpt_model_type)
         else:
             context = explanations[0].split('\n')[0] # get the context about what the chapter is about.
-            prompt2 = f"""
-            I want you to act as Sheikh Hamza Yusuf. You are an influential Islamic scholar, who has a profound understanding of the Qur'an, Hadith, and various branches of Islamic Jurisprudence. 
-            You are deeply conversant with the various cultural, historical, and philosophical contexts of Islamic thought. You are committed to promoting peace, understanding, and the intellectual tradition of Islam. 
-            I know that you are just an AI, but I don't want you to say that at the beginning, just emulate this description to the best of your ability. My first request is as follows:
-
-            To the best of your ability, explain the meaning of the verse below. 
-            I understand you are just an AI language model, but please remember I don't want you to state or acknowledge that, just try to emulate Sheikh Hamza Yusuf and interpret the possible meaning of the given verse.{telegraphic_prompt} \n\n Verse: \n {verse_text} \n\n Context: \n {context} \n\n Explanation: \n
-            """
-            explanation = query_gpt(prompt2,gpt_model_type)
+            verse_explanation_prompt = access_and_read_package_file('fajrGPT', 'assets/prompt/verse_explanation.txt').format(telegraphic_prompt=telegraphic_prompt,verse_text=verse_text,context=context)
+            quran_prompt = scholar_prompt + "\n\n" + verse_explanation_prompt
+            explanation = query_gpt(quran_prompt,gpt_model_type)
         verse_texts.append(verse_text)
         explanations.append(explanation)
 
@@ -421,13 +427,13 @@ def gradually_change_volume(start_volume, end_volume, duration):
             print("Stopping volume change due to stop_audio being called")
             break
     
-def crossfade(c1, c2, fade_duration):
+def crossfade(c1, c2, fade_duration, max_volume=1):
     """
     Performs a crossfade between two channels over a specified duration.
     """
     global stop_audio_called
     steps = 200
-    volume_step = 1 / steps
+    volume_step = max_volume / steps
     step_duration = fade_duration / steps
 
     total_volume = 10 * math.log10(10 ** (c1.get_volume() / 10) + 10 ** (c2.get_volume() / 10))
@@ -444,10 +450,10 @@ def crossfade(c1, c2, fade_duration):
         c1.set_volume(c1_volume)
         time.sleep(step_duration / 1000)
 
-    c2.set_volume(1)
+    c2.set_volume(max_volume)
     c1.stop()
 
-def play_audio_loop(mp3_path, fade_duration=2000, crossfade_point=0.166):
+def play_audio_loop(mp3_path, fade_duration=2000, crossfade_point=0.166, max_volume=1):
     """
     Plays an audio loop with crossfade using two channels. The loop continues until stop_audio is set to True.
     """
@@ -466,7 +472,7 @@ def play_audio_loop(mp3_path, fade_duration=2000, crossfade_point=0.166):
     channel1.set_volume(0)
     channel1.play(audio, loops=0)
     current_channel = 1
-    fade_in_channel(channel1, fade_duration)
+    fade_in_channel(channel1, fade_duration, max_volume)
 
     # Begin a timer to track playback time
     start_time = time.time()
@@ -493,13 +499,13 @@ def play_audio_loop(mp3_path, fade_duration=2000, crossfade_point=0.166):
     channel1.stop()
     channel2.stop()
     
-def fade_in_channel(channel, fade_duration):
+def fade_in_channel(channel, fade_duration, max_volume=1):
     """
     Gradually increases the volume of a channel to maximum over a specified duration.
     """
     global stop_audio_called
     steps = 200
-    volume_step = 1 / steps
+    volume_step = max_volume / steps
     step_duration = fade_duration / steps
 
     for step in range(steps):
@@ -510,7 +516,7 @@ def fade_in_channel(channel, fade_duration):
         channel.set_volume(step * volume_step)
         time.sleep(step_duration / 1000)
     
-    channel.set_volume(1)
+    channel.set_volume(max_volume)
 
 
 def play_audio(file_path_or_url, transition_time=900, max_volume=1):
