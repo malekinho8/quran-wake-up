@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fajrGPT",
-    version="1.6.4",
+    version="1.6.5",
     author="Malek Ibrahim",
     author_email="shmeek8@gmail.com",
     description=("A Python application to assist in waking up for Fajr prayer "
@@ -13,8 +13,8 @@ setup(
     url="https://github.com/malekinho8/quran-wake-up",
     packages=find_packages(),
     package_data={
-        # Include all MP3 files in the 'assets' subdirectory
-        'fajrGPT': ['assets/*.mp3'],
+        # Include all MP3 files in the 'assets' subdirectory as well as txt files in fajrGPT
+        'fajrGPT': ['assets/noise/*.mp3', 'assets/prompt/*.txt', 'assets/scholars/*.txt'],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",
