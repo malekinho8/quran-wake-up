@@ -290,16 +290,20 @@ def display_allah_name_and_explanation(name_of_allah_arabic, name_of_allah_trans
     print(f'---------------- {name_of_allah_arabic}: {name_of_allah_transliteration} - {name_of_allah_english} ---------------- \n\n')
     print(f'Explanation: {explanation}\n\n\n\n')
 
-def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type,out_queue,telegraphic_flag,scholar):
+def get_explanations(verses_Quran_Module,verses,countdown_seconds,gpt_model_type,out_queue,telegraphic_flag,scholar,override_number):
     # Depending on the length of the countdown, select the number of verses to display
-    if countdown_seconds < 3600: # less than 1 hour
-        verses_Quran_Module = verses_Quran_Module[0:1] # only display the first verse
-        verses = verses[0:1]
-    elif countdown_seconds > 3600 and countdown_seconds < 7200: # between 1 and 2 hours
-        verses_Quran_Module = verses_Quran_Module[0:2] # only display the first two verses
-        verses = verses[0:2]
+    if override_number is None:
+        if countdown_seconds < 3600: # less than 1 hour
+            verses_Quran_Module = verses_Quran_Module[0:1] # only display the first verse
+            verses = verses[0:1]
+        elif countdown_seconds > 3600 and countdown_seconds < 7200: # between 1 and 2 hours
+            verses_Quran_Module = verses_Quran_Module[0:2] # only display the first two verses
+            verses = verses[0:2]
+        else:
+            pass
     else:
-        pass
+        verses_Quran_Module = verses_Quran_Module[0:int(override_number)]
+
 
     # initialize the verse_texts output and explanations output
     verse_texts = []
