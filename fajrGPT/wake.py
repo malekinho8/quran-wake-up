@@ -13,6 +13,8 @@ check_ffmpeg()
 @click.command()
 @click.option('--countdown-time', required=True, help='Countdown time in format [number][h/m/s], i.e. 1h would create a 1 hour timer.')
 @click.option('--surah', required=False, help='Specific Surah from the Quran to play for the alarm audio (int between 1 and 114). Default is the first chapter (Surah Al-Fatihah).', default=1)
+@click.option('--surah-verse-start', required=False, help='Specific verse from the Surah to start the alarm audio from (int). Default is the first verse.', default=1)
+@click.option('--surah-verse-end', required=False, help='Specific verse from the Surah to end the alarm audio at (int). Default is the last verse (-1).' , default=-1)
 @click.option('--names-flag', required=False, help='Whether or not to include a randomly selected name of Allah in the preamble.', default=True)
 @click.option('--english', required=False, help='Whether or not to play audio with the english translation of the Quran verses.', default=False)
 @click.option('--low-pass', required=False, help='Amount of low-pass to apply to the audio (float (KHz) or None). Default is 10 (KHz).', default=10)
@@ -25,7 +27,7 @@ check_ffmpeg()
 @click.option('--scholar', required=False, default='hamza_yusuf', help='Which scholar to use for the Quran verse explanations. Options are: hamza_yusuf, nouman_ali_khan, or mufti_menk.')
 @click.option('--override-number', required=False, default=None, help='Set the number of verses tp show in the explanation. Default is None, which will set the verse number selection process automatically based on the countdown time.')
 
-def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True, noise=False, noise_type='brown', max_noise_volume=1, max_alarm_volume=0.04, scholar='hamza_yusuf', override_number=None):
+def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True, noise=False, noise_type='brown', max_noise_volume=1, max_alarm_volume=0.04, scholar='hamza_yusuf', override_number=None, surah_verse_start=1, surah_verse_end=-1):
     # initialize the result queues
     allah_queue = queue.Queue() if names_flag else None
     selected_verses_queue = queue.Queue()
@@ -37,7 +39,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     countdown_seconds = convert_to_seconds(countdown_time)
 
     # Create threads for audio processing and countdown
-    prepare_alarm_audio_thread = Thread(target=alarm_audio_processing, args=(surah, english, low_pass, alarm_out_queue))
+    prepare_alarm_audio_thread = Thread(target=alarm_audio_processing, args=(surah, english, low_pass, surah_verse_start, surah_verse_end, alarm_out_queue))
     countdown_thread = Thread(target=countdown, args=(countdown_seconds,))
     countdown_stopper_thread = Thread(target=premature_countdown_stop, args=())
 

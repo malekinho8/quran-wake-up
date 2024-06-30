@@ -64,14 +64,18 @@ def print_selected_verses(verses:list):
     for verse in verses:
         print(f'{verse}')
 
-def alarm_audio_processing(surah, english, low_pass, out_queue=None):
+def alarm_audio_processing(surah, english, low_pass, surah_verse_start, surah_verse_end, out_queue=None):
     # make the output file name the same as the surah
-    output = 'quran-' + '{:03d}'.format(int(surah))
+    output_folder = 'quran-audio'
+    output_name = 'surah-' + '{:03d}'.format(int(surah)) + '-verse-' + '{:03d}'.format(int(surah_verse_start)) + '{:03d}'.format(int(surah_verse_end))
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder, exist_ok=True)
+    output = os.path.join(output_folder, output_name)
     if not english:
-        flag = download_surah(surah, output)
+        flag = download_surah(surah, output, surah_verse_start, surah_verse_end)
     else:
         output += '-english'
-        flag = download_surah_with_english(surah, output)
+        flag = download_surah_with_english(surah, output, surah_verse_start, surah_verse_end)
 
     # test audio
     test_audio(f'{output}.mp3', output, flag)
@@ -86,21 +90,26 @@ def alarm_audio_processing(surah, english, low_pass, out_queue=None):
     else:
         return True
 
-def download_surah_with_english(surah, output):
+def download_surah_with_english(surah, output, surah_verse_start, surah_verse_end):
     # check if the output file already exists
     if os.path.exists(f'{output}.mp3'):
         # if the output file exists, then return True
         return True
-    else:        
-        # get the url directly from thechosenone.info
-        url = quran_surah_with_english_to_mp3_url(surah)
-
+    else:
+        # first obtain the english verses urls in the surah (+1 corresponds to the basmalah)
+        urls = [quran_english_verse_to_mp3_url("1:1")] + [quran_english_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(surah_verse_start,surah_verse_end)]
         # download the verse audio and sleep for 0.5 seconds between each download
-        file_path = download_file_and_sleep(url,0.5)
-
+        english_file_paths = [download_file_and_sleep(url,0.5) for url in urls]
+        # then obtain the arabic verses urls in the surah (+1 corresponds to the basmalah)
+        urls = [quran_verse_to_mp3_url("1:1")] + [quran_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(surah_verse_start,surah_verse_end)]
+        # download the verse audio and sleep for 0.5 seconds between each download
+        arabic_file_paths = [download_file_and_sleep(url,0.5) for url in urls]
+        # combine the file paths such that it goes arabic, english, arabic, english, etc.
+        combined_file_paths = [val for pair in zip(arabic_file_paths, english_file_paths) for val in pair]
         # combine the audio files
         combined_audio = AudioSegment.empty()
-        combined_audio += AudioSegment.from_mp3(file_path)
+        for file_path in combined_file_paths:
+            combined_audio += AudioSegment.from_mp3(file_path)
 
         # save the combined audio file
         combined_audio.export(f'{output}.mp3', format="mp3")
@@ -108,17 +117,17 @@ def download_surah_with_english(surah, output):
         # return False
         return False
 
-def download_surah(surah, output):
+def download_surah(surah, output, surah_verse_start, surah_verse_end):
     # check if the output file already exists
     if os.path.exists(f'{output}.mp3'):
         # if the output file exists, then return True
         return True
     else:
-        # obtain the number of verses in the surah
-        num_verses = quran_chapter_to_verse[int(surah)] + 1 # +1 corresponds to the basmalah
+        # obtain the number of verses in the surah (+1 corresponds to the basmalah)
+        end_verse_number = quran_chapter_to_verse[int(surah)] + 1  if surah_verse_end == -1 else surah_verse_end
         
         # loop over all the verses in the surah and construct the urls
-        urls = [quran_verse_to_mp3_url("1:1")] + [quran_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(1,num_verses)]
+        urls = [quran_verse_to_mp3_url("1:1")] + [quran_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(surah_verse_start,end_verse_number)]
 
         # download the verse audio and sleep for 0.5 seconds between each download
         file_paths = [download_file_and_sleep(url,0.5) for url in urls]
@@ -188,6 +197,19 @@ def quran_verse_to_mp3_url(verse):
 
     # get the url of the mp3 file
     url = f'https://islamicstudies.info/quran/afasy/audio/{chapter}{verse_number}.mp3'
+
+    return url
+
+def quran_english_verse_to_mp3_url(verse):
+    # get the chapter and verse number
+    chapter, verse_number = verse.split(':')
+
+    # convert the numbers to the correct string format
+    chapter = chapter.zfill(3)
+    verse_number = verse_number.zfill(3)
+
+    # get the url of the mp3 file
+    url = f'https://everyayah.com/data/English/Sahih_Intnl_Ibrahim_Walk_192kbps/{chapter}{verse_number}.mp3'
 
     return url
 
