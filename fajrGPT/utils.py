@@ -96,6 +96,8 @@ def download_surah_with_english(surah, output, surah_verse_start, surah_verse_en
         # if the output file exists, then return True
         return True
     else:
+        # obtain the number of verses in the surah (+1 corresponds to the basmalah)
+        surah_verse_end = quran_chapter_to_verse[int(surah)] + 1  if surah_verse_end == -1 else surah_verse_end
         # first obtain the english verses urls in the surah (+1 corresponds to the basmalah)
         urls = [quran_english_verse_to_mp3_url("1:1")] + [quran_english_verse_to_mp3_url(f'{surah}:{verse}') for verse in range(surah_verse_start,surah_verse_end)]
         # download the verse audio and sleep for 0.5 seconds between each download
