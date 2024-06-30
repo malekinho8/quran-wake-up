@@ -18,6 +18,10 @@ from scipy.signal import butter, lfilter
 from pydub import AudioSegment
 from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
 
+# Declare global variables
+bypass_countdown_flag = False
+countdown_finished = False
+
 def play_noise(noise_type, crossfade_duration=2000, crossfade_point=0.1666, audio_length=120, max_volume=1):
     # set the file path depending on the noise type given
     try:
@@ -235,15 +239,33 @@ def countdown(countdown_seconds):
     bypass_countdown_flag = False
 
     # use tqdm to display the countdown progress
-    print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n\n\n')
+    print('\n\n\n\n ---------------- BEGINNING COUNTDOWN ---------------- \n\n')
+    # print to the user that they can stop the countdown by pressing Enter
+    print('Press Enter to stop the countdown prematurely. \n\n\n')
     # print the current time in HH:MM format
     print(f'\n\nSTART TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
     for i in tqdm(range(int(countdown_seconds))):
         time.sleep(1)
+        if bypass_countdown_flag:
+            break
+    
+    # set the countdown_finished flag to True
     countdown_finished = True
     print('\n\n\n\n ---------------- COUNTDOWN COMPLETE ----------------')
     # print the current time in HH:MM format
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
+
+# define a function to stop the countdown prematurely if the user presses Enter
+def premature_countdown_stop():
+    # specify a global variable to store if the countdown has finished or not
+    global countdown_finished
+    global bypass_countdown_flag
+    # wait for the user to press Enter or for the countdown to finish
+    while not countdown_finished:
+        user_input = input()
+        if user_input == '':
+            bypass_countdown_flag = True
+            break
 
 # define a function to open text files
 def open_text_file(file_path):

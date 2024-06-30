@@ -4,7 +4,7 @@ import click
 import time
 import openai
 import queue
-from threading import Thread
+from threading import Thread, Event
 from fajrGPT.utils import *
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -39,6 +39,7 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
     # Create threads for audio processing and countdown
     prepare_alarm_audio_thread = Thread(target=alarm_audio_processing, args=(surah, english, low_pass, alarm_out_queue))
     countdown_thread = Thread(target=countdown, args=(countdown_seconds,))
+    countdown_stopper_thread = Thread(target=premature_countdown_stop, args=())
 
     # Create a thread for playing some noise during the countdown if the user has specified so
     if noise:
@@ -54,13 +55,14 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
 
     # Start the threads
     countdown_thread.start()
+    countdown_stopper_thread.start()
     selected_verses_thread.start()
 
     # wait a second and then start the noise thread if it was specified
     if noise:
         time.sleep(1)
         play_noise_thread.start()
-
+    
     # wait for the selected verse thread to finish
     selected_verses_thread.join()
 
@@ -80,6 +82,9 @@ def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, g
 
     # Wait for both threads to finish
     countdown_thread.join()
+
+    # stop the countdown stopper thread
+    countdown_stopper_thread.join()
 
     # stop the noise thread if it was started
     if noise:
