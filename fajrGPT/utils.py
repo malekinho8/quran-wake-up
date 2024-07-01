@@ -12,6 +12,8 @@ import mutagen.mp3 as mp3
 import math
 import pkg_resources
 import tempfile
+import selectors
+from threading import Event
 from tqdm import tqdm
 from Quran_Module import Project_Quran
 from scipy.signal import butter, lfilter
@@ -21,6 +23,7 @@ from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_
 # Declare global variables
 bypass_countdown_flag = False
 countdown_finished = False
+countdown_finished_event = Event()
 
 def play_noise(noise_type, crossfade_duration=2000, crossfade_point=0.1666, audio_length=120, max_volume=1):
     # set the file path depending on the noise type given
@@ -275,21 +278,37 @@ def countdown(countdown_seconds):
     
     # set the countdown_finished flag to True
     countdown_finished = True
+    # set the event to indicate that the countdown has finished
+    countdown_finished_event.set()
     print('\n\n\n\n ---------------- COUNTDOWN COMPLETE ----------------')
     # print the current time in HH:MM format
     print(f'\n\nEND TIME: {time.strftime("%H:%M", time.localtime())}\n\n')
 
 # define a function to stop the countdown prematurely if the user presses Enter
 def premature_countdown_stop():
-    # specify a global variable to store if the countdown has finished or not
-    global countdown_finished
     global bypass_countdown_flag
-    # wait for the user to press Enter or for the countdown to finish
-    while not countdown_finished:
-        user_input = input()
-        if user_input == '':
-            bypass_countdown_flag = True
-            break
+    # Create a default selector object to monitor I/O events
+    sel = selectors.DefaultSelector()
+    # Register the standard input (stdin) for read events
+    sel.register(sys.stdin, selectors.EVENT_READ)
+    # Loop until the countdown finished event is set
+    while not countdown_finished_event.is_set():
+        # Use the selector to check for I/O events with a timeout
+        events = sel.select(timeout=1)  # Adjust the timeout as needed
+        # Iterate over the events
+        for key, mask in events:
+            # Check if the event is from stdin
+            if key.fileobj == sys.stdin:
+                # Read the user input from stdin and strip any extra whitespace
+                user_input = sys.stdin.readline().strip()
+                # If the user input is an empty string (Enter key pressed)
+                if user_input == '':
+                    # Set the bypass countdown flag to True
+                    bypass_countdown_flag = True      
+                    # Set the countdown finished event to stop the countdown thread
+                    countdown_finished_event.set()       
+                    # Exit the function
+                    return
 
 # define a function to open text files
 def open_text_file(file_path):
