@@ -7,7 +7,7 @@ import queue
 from threading import Thread, Event
 from fajrGPT.utils import *
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
 check_ffmpeg()
 
 @click.command()
@@ -27,7 +27,7 @@ check_ffmpeg()
 @click.option('--scholar', required=False, default='hamza_yusuf', help='Which scholar to use for the Quran verse explanations. Options are: hamza_yusuf, nouman_ali_khan, or mufti_menk.')
 @click.option('--override-number', required=False, default=None, help='Set the number of verses tp show in the explanation. Default is None, which will set the verse number selection process automatically based on the countdown time.')
 
-def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4-0314", telegraphic=True, noise=False, noise_type='brown', max_noise_volume=1, max_alarm_volume=0.04, scholar='hamza_yusuf', override_number=None, surah_verse_start=1, surah_verse_end=-1):
+def main(countdown_time, surah=1, names_flag=True, english=False, low_pass=10, gpt_model_type="gpt-4o", telegraphic=True, noise=False, noise_type='brown', max_noise_volume=1, max_alarm_volume=0.04, scholar='hamza_yusuf', override_number=None, surah_verse_start=1, surah_verse_end=-1):
     # initialize the result queues
     allah_queue = queue.Queue() if names_flag else None
     selected_verses_queue = queue.Queue()

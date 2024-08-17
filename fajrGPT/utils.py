@@ -20,6 +20,8 @@ from scipy.signal import butter, lfilter
 from pydub import AudioSegment
 from fajrGPT.quran_metadata import quran_chapter_to_verse, surah_number_to_name_tag
 
+client = openai.Client(api_key=os.getenv("OPENAI_API_KEY"))
+
 # Declare global variables
 bypass_countdown_flag = False
 countdown_finished = False
@@ -454,12 +456,12 @@ def query_gpt(prompt,gpt_model_type):
     "model": gpt_model_type,
     }
     
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
                 messages = [{"role": "user", "content": prompt}],
                 **COMPLETIONS_API_PARAMS
             )
 
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 def gradually_change_volume(start_volume, end_volume, duration):
     # specify a global variable to indicate whether or not the audio has finished changing volume
